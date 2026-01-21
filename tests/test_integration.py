@@ -3,6 +3,9 @@ Integration tests for Suno MCP Server.
 
 These tests make REAL API calls to verify all tools work correctly.
 Run with: pytest tests/test_integration.py -v -s
+
+Note: These tests require ACEDATA_API_TOKEN to be set.
+They are skipped in CI environments without the token.
 """
 
 import os
@@ -18,10 +21,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Check if API token is configured
+HAS_API_TOKEN = bool(os.getenv("ACEDATA_API_TOKEN"))
+
+# Decorator to skip tests that require API token
+requires_api_token = pytest.mark.skipif(
+    not HAS_API_TOKEN,
+    reason="ACEDATA_API_TOKEN not configured - skipping integration test",
+)
+
 
 class TestAudioTools:
     """Integration tests for audio generation tools."""
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_generate_music_basic(self):
         """Test basic music generation with real API."""
@@ -43,6 +56,7 @@ class TestAudioTools:
             assert "Audio URL:" in result
             assert "https://" in result
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_generate_custom_music(self):
         """Test custom music generation with lyrics."""
@@ -67,6 +81,7 @@ class TestAudioTools:
 class TestLyricsTools:
     """Integration tests for lyrics generation tools."""
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_generate_lyrics(self):
         """Test lyrics generation with real API."""
@@ -134,6 +149,7 @@ class TestInfoTools:
 class TestTaskTools:
     """Integration tests for task query tools."""
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_get_task_with_real_id(self):
         """Test querying a task - first generate, then query."""
@@ -169,6 +185,7 @@ class TestTaskTools:
 class TestClientDirectly:
     """Test the client module directly."""
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_client_generate_audio(self):
         """Test client.generate_audio directly."""
@@ -190,6 +207,7 @@ class TestClientDirectly:
             assert "task_id" in result
             assert "data" in result
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_client_generate_lyrics(self):
         """Test client.generate_lyrics directly."""
@@ -213,6 +231,7 @@ class TestClientDirectly:
 class TestFullWorkflow:
     """End-to-end workflow tests."""
 
+    @requires_api_token
     @pytest.mark.asyncio
     async def test_lyrics_then_music_workflow(self):
         """Test complete workflow: generate lyrics then create music."""

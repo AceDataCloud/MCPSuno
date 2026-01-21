@@ -47,9 +47,7 @@ async def suno_get_task(
 async def suno_get_tasks_batch(
     task_ids: Annotated[
         list[str],
-        Field(
-            description="List of task IDs to query. Maximum recommended batch size is 50 tasks."
-        ),
+        Field(description="List of task IDs to query. Maximum recommended batch size is 50 tasks."),
     ],
 ) -> str:
     """Query multiple music generation tasks at once.
