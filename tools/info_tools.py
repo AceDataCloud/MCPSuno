@@ -4,10 +4,22 @@ from core.server import mcp
 
 
 @mcp.tool()
-async def list_models() -> str:
-    """List available Suno models and their capabilities.
+async def suno_list_models() -> str:
+    """List all available Suno models and their capabilities.
 
-    Shows all available model versions with their limits and features.
+    Shows all available model versions with their limits, features, and
+    recommended use cases. Use this to understand which model to choose
+    for your music generation.
+
+    Model comparison:
+    - chirp-v5: Latest and best quality, 8-minute max duration
+    - chirp-v4-5-plus: High quality with 8-minute duration
+    - chirp-v4-5: Recommended balance of quality and speed, 4-minute duration
+    - chirp-v4: Good quality, 150 seconds max
+    - chirp-v3-5/v3: Legacy models, 120 seconds max
+
+    Returns:
+        Table of all models with their version, limits, and features.
     """
     return """Available Suno Models:
 
@@ -20,7 +32,7 @@ async def list_models() -> str:
 | chirp-v3-5      | V3.5    | 3000 chars   | 200 chars   | 120 seconds  |
 | chirp-v3        | V3      | 3000 chars   | 200 chars   | 120 seconds  |
 
-Recommended: chirp-v4-5 or chirp-v5 for best quality.
+Recommended: chirp-v4-5 for most use cases, chirp-v5 for best quality.
 
 Features by Version:
 - V4.5+: Vocal gender control ('f' for female, 'm' for male)
@@ -29,58 +41,64 @@ Features by Version:
 
 
 @mcp.tool()
-async def list_actions() -> str:
-    """List all available Suno API actions and their purposes.
+async def suno_list_actions() -> str:
+    """List all available Suno API actions and corresponding tools.
 
-    Reference for what each action does in the Suno API.
+    Reference guide for what each action does and which tool to use.
+    Helpful for understanding the full capabilities of the Suno MCP.
+
+    Returns:
+        Categorized list of all actions and their corresponding tools.
     """
-    return """Available Suno Actions:
+    return """Available Suno Actions and Tools:
 
 Music Generation:
-- generate: Create new music from prompt or custom lyrics
-- extend: Continue an existing song from a specific timestamp
-- cover: Create a cover/remix version of a song
-- concat: Merge extended song segments into complete audio
+- suno_generate_music: Create music from a simple text prompt (Inspiration Mode)
+- suno_generate_custom_music: Create music with custom lyrics and style (Custom Mode)
+- suno_extend_music: Continue an existing song from a specific timestamp
+- suno_cover_music: Create a cover/remix version of a song
+- suno_concat_music: Merge extended song segments into complete audio
 
-Upload-based Actions:
-- upload_extend: Extend user-uploaded audio
-- upload_cover: Create cover of uploaded audio
+Persona (Voice Style):
+- suno_create_persona: Save a voice style for reuse
+- suno_generate_with_persona: Generate with a saved voice style
 
-Persona Actions:
-- artist_consistency: Generate with saved persona (voice style)
-- artist_consistency_vox: Generate with Persona-v2-vox
+Lyrics:
+- suno_generate_lyrics: Generate song lyrics from a prompt
 
-Audio Processing:
-- stems: Extract stems (vocals, instruments) from audio
-- all_stems: Extract all available stems
-- remaster: Improve audio quality
-- replace_section: Replace a specific section of audio
+Task Management:
+- suno_get_task: Check status of a single generation
+- suno_get_tasks_batch: Check status of multiple generations
 
-Tools Available:
-- generate_music: Simple prompt-based generation
-- generate_custom_music: Full control with lyrics and style
-- extend_music: Continue existing songs
-- cover_music: Create cover versions
-- concat_music: Merge song segments
-- generate_with_persona: Use saved voice styles
-- generate_lyrics: Create lyrics from prompt
-- create_persona: Save voice styles for reuse
-- get_task: Check generation status
-- get_tasks_batch: Check multiple tasks at once
+Information:
+- suno_list_models: Show available models and their capabilities
+- suno_list_actions: Show this action reference (you are here)
+- suno_get_lyric_format_guide: Show how to format lyrics
+
+Workflow Examples:
+1. Quick song: suno_generate_music → suno_get_task
+2. Custom song: suno_generate_lyrics → suno_generate_custom_music → suno_get_task
+3. Long song: suno_generate_music → suno_extend_music (repeat) → suno_concat_music
+4. Consistent voice: suno_generate_music → suno_create_persona → suno_generate_with_persona
 """
 
 
 @mcp.tool()
-async def get_lyric_format_guide() -> str:
-    """Get guidance on formatting lyrics for Suno.
+async def suno_get_lyric_format_guide() -> str:
+    """Get guidance on formatting lyrics for Suno music generation.
 
     Shows how to structure lyrics with section markers for best results.
+    Following this format helps Suno understand the song structure and
+    generate appropriate melodies for each section.
+
+    Returns:
+        Complete guide with section markers, examples, and tips.
     """
     return """Lyric Format Guide for Suno:
 
 Section Markers (use square brackets):
 - [Verse] or [Verse 1], [Verse 2]: Main storytelling sections
-- [Chorus]: Repeated catchy section
+- [Chorus]: Repeated catchy section (the hook)
 - [Pre-Chorus]: Build-up before chorus
 - [Bridge]: Contrasting section, usually near the end
 - [Outro]: Ending section
@@ -124,9 +142,11 @@ Winding down
 Fade out
 ```
 
-Tips:
-- Keep lines concise for better singing flow
-- Use simple, clear language
-- Include rhymes for catchiness
+Tips for Best Results:
+- Keep lines concise (4-8 words) for better singing flow
+- Use simple, clear language that's easy to sing
+- Include rhymes for catchiness (especially in chorus)
 - Leave some creative freedom for the AI
+- Use consistent line lengths within sections
+- End verses with a lead-in to the chorus
 """

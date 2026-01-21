@@ -1,18 +1,40 @@
 """Task query tools for Suno API."""
 
+from typing import Annotated
+
+from pydantic import Field
+
 from core.client import client
 from core.server import mcp
 from core.utils import format_task_result
 
 
 @mcp.tool()
-async def get_task(task_id: str) -> str:
+async def suno_get_task(
+    task_id: Annotated[
+        str,
+        Field(
+            description="The task ID returned from a generation request. This is the 'task_id' field from any suno_generate_*, suno_extend_*, suno_cover_*, or suno_concat_* tool response."
+        ),
+    ],
+) -> str:
     """Query the status and result of a music generation task.
 
-    Check if a generation is complete and get the resulting audio URLs.
+    Use this to check if a generation is complete and retrieve the resulting
+    audio URLs, titles, lyrics, and other metadata.
 
-    Args:
-        task_id: The task ID returned from a generation request
+    Use this when:
+    - You want to check if a generation has completed
+    - You need to retrieve audio URLs from a previous generation
+    - You want to get the full details of a generated song
+
+    Task states:
+    - 'pending': Generation is still in progress
+    - 'complete': Generation finished successfully
+    - 'failed': Generation failed (check error message)
+
+    Returns:
+        Task status and generated audio information including URLs, title, lyrics, and duration.
     """
     result = await client.query_task(
         id=task_id,
@@ -22,13 +44,26 @@ async def get_task(task_id: str) -> str:
 
 
 @mcp.tool()
-async def get_tasks_batch(task_ids: list[str]) -> str:
+async def suno_get_tasks_batch(
+    task_ids: Annotated[
+        list[str],
+        Field(
+            description="List of task IDs to query. Maximum recommended batch size is 50 tasks."
+        ),
+    ],
+) -> str:
     """Query multiple music generation tasks at once.
 
     Efficiently check the status of multiple tasks in a single request.
+    More efficient than calling suno_get_task multiple times.
 
-    Args:
-        task_ids: List of task IDs to query
+    Use this when:
+    - You have multiple pending generations to check
+    - You want to get status of several songs at once
+    - You're tracking a batch of generations
+
+    Returns:
+        Status and audio information for all queried tasks.
     """
     result = await client.query_task(
         ids=task_ids,
