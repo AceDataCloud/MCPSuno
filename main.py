@@ -108,8 +108,8 @@ Environment Variables:
 
     # Import tools and prompts to register them
     safe_print("  Loading tools and prompts...")
+    import prompts  # noqa: F401, I001
     import tools  # noqa: F401
-    import prompts  # noqa: F401
 
     safe_print("  [OK] Tools and prompts loaded")
     safe_print("")

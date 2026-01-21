@@ -25,9 +25,9 @@ class TestAudioTools:
     @pytest.mark.asyncio
     async def test_generate_music_basic(self):
         """Test basic music generation with real API."""
-        from tools.audio_tools import generate_music
+        from tools.audio_tools import suno_generate_music
 
-        result = await generate_music(
+        result = await suno_generate_music(
             prompt="A short test jingle, upbeat and happy",
             model="chirp-v3-5",  # Use v3.5 for faster generation
             instrumental=False,
@@ -46,9 +46,9 @@ class TestAudioTools:
     @pytest.mark.asyncio
     async def test_generate_custom_music(self):
         """Test custom music generation with lyrics."""
-        from tools.audio_tools import generate_custom_music
+        from tools.audio_tools import suno_generate_custom_music
 
-        result = await generate_custom_music(
+        result = await suno_generate_custom_music(
             lyric="[Verse]\nThis is a test song\nJust for testing\n[Chorus]\nTest test test",
             title="Test Song",
             style="pop, simple",
@@ -70,9 +70,9 @@ class TestLyricsTools:
     @pytest.mark.asyncio
     async def test_generate_lyrics(self):
         """Test lyrics generation with real API."""
-        from tools.lyrics_tools import generate_lyrics
+        from tools.lyrics_tools import suno_generate_lyrics
 
-        result = await generate_lyrics(
+        result = await suno_generate_lyrics(
             prompt="A short song about testing software",
             model="chirp-v3",
         )
@@ -91,10 +91,10 @@ class TestInfoTools:
 
     @pytest.mark.asyncio
     async def test_list_models(self):
-        """Test list_models tool."""
-        from tools.info_tools import list_models
+        """Test suno_list_models tool."""
+        from tools.info_tools import suno_list_models
 
-        result = await list_models()
+        result = await suno_list_models()
 
         print("\n=== List Models Result ===")
         print(result)
@@ -105,24 +105,24 @@ class TestInfoTools:
 
     @pytest.mark.asyncio
     async def test_list_actions(self):
-        """Test list_actions tool."""
-        from tools.info_tools import list_actions
+        """Test suno_list_actions tool."""
+        from tools.info_tools import suno_list_actions
 
-        result = await list_actions()
+        result = await suno_list_actions()
 
         print("\n=== List Actions Result ===")
         print(result)
 
-        assert "generate" in result
-        assert "extend" in result
-        assert "cover" in result
+        assert "suno_generate_music" in result
+        assert "suno_extend_music" in result
+        assert "suno_cover_music" in result
 
     @pytest.mark.asyncio
     async def test_get_lyric_format_guide(self):
         """Test lyric format guide tool."""
-        from tools.info_tools import get_lyric_format_guide
+        from tools.info_tools import suno_get_lyric_format_guide
 
-        result = await get_lyric_format_guide()
+        result = await suno_get_lyric_format_guide()
 
         print("\n=== Lyric Format Guide ===")
         print(result)
@@ -137,11 +137,11 @@ class TestTaskTools:
     @pytest.mark.asyncio
     async def test_get_task_with_real_id(self):
         """Test querying a task - first generate, then query."""
-        from tools.audio_tools import generate_music
-        from tools.task_tools import get_task
+        from tools.audio_tools import suno_generate_music
+        from tools.task_tools import suno_get_task
 
         # First generate something to get a task ID
-        gen_result = await generate_music(
+        gen_result = await suno_generate_music(
             prompt="Quick test melody",
             model="chirp-v3-5",
         )
@@ -160,7 +160,7 @@ class TestTaskTools:
 
             if task_id and task_id != "N/A":
                 print(f"\n=== Querying Task: {task_id} ===")
-                task_result = await get_task(task_id)
+                task_result = await suno_get_task(task_id)
                 print(task_result)
 
                 assert "Task ID:" in task_result
@@ -216,11 +216,11 @@ class TestFullWorkflow:
     @pytest.mark.asyncio
     async def test_lyrics_then_music_workflow(self):
         """Test complete workflow: generate lyrics then create music."""
-        from tools.audio_tools import generate_custom_music
-        from tools.lyrics_tools import generate_lyrics
+        from tools.audio_tools import suno_generate_custom_music
+        from tools.lyrics_tools import suno_generate_lyrics
 
         print("\n=== Step 1: Generate Lyrics ===")
-        lyrics_result = await generate_lyrics(
+        lyrics_result = await suno_generate_lyrics(
             prompt="A short happy song",
         )
         print(lyrics_result)
@@ -242,7 +242,7 @@ class TestFullWorkflow:
                 lyrics_text = "\n".join(extracted_lyrics).strip()
                 if lyrics_text and lyrics_text != "N/A":
                     print("\n=== Step 2: Generate Music with Lyrics ===")
-                    music_result = await generate_custom_music(
+                    music_result = await suno_generate_custom_music(
                         lyric=lyrics_text[:500],  # Limit length for test
                         title="Generated Happy Song",
                         style="pop, upbeat",
