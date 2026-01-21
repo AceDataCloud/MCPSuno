@@ -99,7 +99,9 @@ class SunoClient:
                         logger.info(f"📊 Returned {len(data)} item(s)")
                         for i, item in enumerate(data, 1):
                             if "audio_url" in item:
-                                logger.info(f"   Song {i}: {item.get('title', 'Untitled')} - {item.get('duration', 0):.1f}s")
+                                logger.info(
+                                    f"   Song {i}: {item.get('title', 'Untitled')} - {item.get('duration', 0):.1f}s"
+                                )
                             elif "text" in item:
                                 logger.info(f"   Lyrics {i}: {item.get('title', 'Untitled')}")
                 else:

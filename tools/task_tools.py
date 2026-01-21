@@ -1,6 +1,5 @@
 """Task query tools for Suno API."""
 
-
 from core.client import client
 from core.server import mcp
 from core.utils import format_task_result
