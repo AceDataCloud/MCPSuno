@@ -1,0 +1,171 @@
+[project]
+name = "mcp-suno"
+version = "0.1.0"
+description = "MCP Server for Suno AI Music Generation via AceDataCloud API"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "AceDataCloud", email = "support@acedata.cloud" }
+]
+maintainers = [
+    { name = "AceDataCloud", email = "support@acedata.cloud" }
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "suno",
+    "ai",
+    "music",
+    "generation",
+    "audio",
+    "acedata",
+    "llm",
+    "claude",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "mcp>=1.2.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "loguru>=0.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "pre-commit>=3.7.0",
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "respx>=0.21.0",
+]
+release = [
+    "build>=1.2.0",
+    "twine>=5.0.0",
+]
+all = [
+    "mcp-suno[dev,test,release]",
+]
+
+[project.scripts]
+mcp-suno = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/AceDataCloud/mcp-suno"
+Documentation = "https://platform.acedata.cloud/documents/4da95d9d-7722-4a72-857d-bf6be86036e9"
+Repository = "https://github.com/AceDataCloud/mcp-suno"
+Issues = "https://github.com/AceDataCloud/mcp-suno/issues"
+Changelog = "https://github.com/AceDataCloud/mcp-suno/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core", "tools", "main.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "core/",
+    "tools/",
+    "tests/",
+    "main.py",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    ".env.example",
+]
+
+# Ruff Configuration
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "E402",   # module level import not at top of file (needed for dotenv loading)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "tools"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# Mypy Configuration
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+# Pytest Configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+# Coverage Configuration
+[tool.coverage.run]
+source = ["core", "tools"]
+branch = true
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
