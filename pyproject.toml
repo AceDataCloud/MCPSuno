@@ -78,12 +78,13 @@ requires = ["hatchling<1.26.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["core", "tools", "main.py"]
+packages = ["core", "tools", "prompts", "main.py"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "core/",
     "tools/",
+    "prompts/",
     "tests/",
     "main.py",
     "README.md",
@@ -124,7 +125,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["core", "tools"]
+known-first-party = ["core", "tools", "prompts"]
 
 [tool.ruff.format]
 quote-style = "double"
