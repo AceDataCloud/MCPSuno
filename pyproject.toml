@@ -74,11 +74,8 @@ Issues = "https://github.com/AceDataCloud/mcp-suno/issues"
 Changelog = "https://github.com/AceDataCloud/mcp-suno/blob/main/CHANGELOG.md"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling<1.26.0"]
 build-backend = "hatchling.build"
-
-[tool.hatch.metadata]
-license-files = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["core", "tools", "main.py"]
