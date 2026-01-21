@@ -20,7 +20,7 @@ class SunoClient:
             api_token: API token for authentication. If not provided, uses settings.
             base_url: Base URL for the API. If not provided, uses settings.
         """
-        self.api_token = api_token or settings.api_token
+        self.api_token = api_token if api_token is not None else settings.api_token
         self.base_url = base_url or settings.api_base_url
         self.timeout = settings.request_timeout
 
@@ -112,6 +112,9 @@ class SunoClient:
                 raise SunoTimeoutError(
                     f"Request to {endpoint} timed out after {request_timeout}s"
                 ) from e
+
+            except SunoAuthError:
+                raise
 
             except httpx.HTTPStatusError as e:
                 logger.error(f"❌ HTTP error {e.response.status_code}: {e.response.text}")

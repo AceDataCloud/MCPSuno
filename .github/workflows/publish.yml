@@ -4,12 +4,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      test_pypi:
-        description: 'Publish to TestPyPI instead of PyPI'
-        required: false
-        default: 'false'
-        type: boolean
 
 jobs:
   build:
@@ -96,32 +90,9 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-  publish-testpypi:
-    name: Publish to TestPyPI
-    if: github.event_name == 'workflow_dispatch' && inputs.test_pypi == 'true'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/project/mcp-suno/${{ needs.build.outputs.version }}
-    steps:
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Publish to TestPyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
-        run: |
-          pip install twine
-          twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-
   publish-pypi:
     name: Publish to PyPI
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.test_pypi == 'false')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     environment:
