@@ -3,8 +3,7 @@ name = "mcp-suno"
 version = "0.1.0"
 description = "MCP Server for Suno AI Music Generation via AceDataCloud API"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [
     { name = "AceDataCloud", email = "support@acedata.cloud" }
@@ -77,6 +76,9 @@ Changelog = "https://github.com/AceDataCloud/mcp-suno/blob/main/CHANGELOG.md"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+license-files = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["core", "tools", "main.py"]
