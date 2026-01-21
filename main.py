@@ -141,7 +141,7 @@ Environment Variables:
     # Run the server
     try:
         if args.transport == "http":
-            mcp.run(transport="streamable-http", host="0.0.0.0", port=args.port)
+            mcp.run(transport="streamable-http", host="0.0.0.0", port=args.port)  # type: ignore[call-arg]
         else:
             mcp.run(transport="stdio")
     except KeyboardInterrupt:
