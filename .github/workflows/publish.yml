@@ -1,8 +1,8 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       test_pypi:
@@ -61,7 +61,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.test_pypi == 'false')
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.test_pypi == 'false')
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -79,22 +79,33 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-  github-release:
-    name: Upload to GitHub Release
-    if: github.event_name == 'release'
+  create-release:
+    name: Create GitHub Release
+    if: github.event_name == 'push'
     needs: publish-pypi
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Download distribution artifacts
         uses: actions/download-artifact@v4
         with:
           name: python-package-distributions
           path: dist/
 
-      - name: Upload to GitHub Release
+      - name: Create Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          gh release upload '${{ github.ref_name }}' dist/** --repo '${{ github.repository }}'
+          gh release create "v${{ steps.version.outputs.version }}" dist/** \
+            --title "v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --repo '${{ github.repository }}' || echo "Release already exists, skipping"
