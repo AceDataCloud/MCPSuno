@@ -107,7 +107,7 @@ class SunoClient:
                 else:
                     logger.warning(f"⚠️ API returned success=false: {result.get('error', {})}")
 
-                return result  # type: ignore[return-value]
+                return result  # type: ignore[no-any-return]
 
             except httpx.TimeoutException as e:
                 logger.error(f"⏰ Request timeout after {request_timeout}s: {e}")
