@@ -59,7 +59,7 @@ Examples:
   mcp-suno --version          # Show version
 
 Environment Variables:
-  ACEDATA_API_TOKEN          API token from AceDataCloud (required)
+  ACEDATACLOUD_API_TOKEN          API token from AceDataCloud (required)
   SUNO_DEFAULT_MODEL         Default model (default: chirp-v4-5)
   SUNO_REQUEST_TIMEOUT       Request timeout in seconds (default: 180)
   LOG_LEVEL                  Logging level (default: INFO)
@@ -98,7 +98,7 @@ Environment Variables:
 
     # Validate configuration
     if not settings.is_configured:
-        safe_print("  [ERROR] ACEDATA_API_TOKEN not configured!")
+        safe_print("  [ERROR] ACEDATACLOUD_API_TOKEN not configured!")
         safe_print("  Get your token from https://platform.acedata.cloud")
         safe_print("")
         sys.exit(1)

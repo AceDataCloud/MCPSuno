@@ -1,6 +1,6 @@
 [project]
 name = "mcp-suno"
-version = "0.1.0"
+version = "2026.1.22.6"
 description = "MCP Server for Suno AI Music Generation via AceDataCloud API"
 readme = "README.md"
 license = { text = "MIT" }

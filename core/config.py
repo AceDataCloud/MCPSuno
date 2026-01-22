@@ -17,9 +17,9 @@ class Settings:
 
     # API Configuration
     api_base_url: str = field(
-        default_factory=lambda: os.getenv("ACEDATA_API_BASE_URL", "https://api.acedata.cloud")
+        default_factory=lambda: os.getenv("ACEDATACLOUD_API_BASE_URL", "https://api.acedata.cloud")
     )
-    api_token: str = field(default_factory=lambda: os.getenv("ACEDATA_API_TOKEN", ""))
+    api_token: str = field(default_factory=lambda: os.getenv("ACEDATACLOUD_API_TOKEN", ""))
 
     # Default Model
     default_model: str = field(
@@ -40,7 +40,7 @@ class Settings:
         """Validate required settings."""
         if not self.api_token:
             raise ValueError(
-                "ACEDATA_API_TOKEN environment variable is required. "
+                "ACEDATACLOUD_API_TOKEN environment variable is required. "
                 "Get your token from https://platform.acedata.cloud"
             )
 

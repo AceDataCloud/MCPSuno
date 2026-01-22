@@ -4,7 +4,7 @@ Integration tests for Suno MCP Server.
 These tests make REAL API calls to verify all tools work correctly.
 Run with: pytest tests/test_integration.py -v -s
 
-Note: These tests require ACEDATA_API_TOKEN to be set.
+Note: These tests require ACEDATACLOUD_API_TOKEN to be set.
 They are skipped in CI environments without the token.
 """
 
@@ -22,12 +22,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Check if API token is configured
-HAS_API_TOKEN = bool(os.getenv("ACEDATA_API_TOKEN"))
+HAS_API_TOKEN = bool(os.getenv("ACEDATACLOUD_API_TOKEN"))
 
 # Decorator to skip tests that require API token
 requires_api_token = pytest.mark.skipif(
     not HAS_API_TOKEN,
-    reason="ACEDATA_API_TOKEN not configured - skipping integration test",
+    reason="ACEDATACLOUD_API_TOKEN not configured - skipping integration test",
 )
 
 

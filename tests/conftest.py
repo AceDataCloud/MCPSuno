@@ -22,9 +22,9 @@ os.environ.setdefault("LOG_LEVEL", "DEBUG")
 @pytest.fixture
 def api_token():
     """Get API token from environment for integration tests."""
-    token = os.environ.get("ACEDATA_API_TOKEN", "")
+    token = os.environ.get("ACEDATACLOUD_API_TOKEN", "")
     if not token:
-        pytest.skip("ACEDATA_API_TOKEN not configured for integration tests")
+        pytest.skip("ACEDATACLOUD_API_TOKEN not configured for integration tests")
     return token
 
 

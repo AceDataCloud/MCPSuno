@@ -49,7 +49,7 @@ uv pip install -e .
 cp .env.example .env
 
 # Edit with your API token
-echo "ACEDATA_API_TOKEN=your_token_here" > .env
+echo "ACEDATACLOUD_API_TOKEN=your_token_here" > .env
 ```
 
 ### 4. Run
@@ -75,7 +75,7 @@ Add to your Claude Desktop configuration:
     "suno": {
       "command": "mcp-suno",
       "env": {
-        "ACEDATA_API_TOKEN": "your_api_token_here"
+        "ACEDATACLOUD_API_TOKEN": "your_api_token_here"
       }
     }
   }
@@ -91,7 +91,7 @@ Or if using uv:
       "command": "uv",
       "args": ["run", "--directory", "/path/to/mcp-suno", "mcp-suno"],
       "env": {
-        "ACEDATA_API_TOKEN": "your_api_token_here"
+        "ACEDATACLOUD_API_TOKEN": "your_api_token_here"
       }
     }
   }
@@ -193,8 +193,8 @@ Claude: I'll extend the song with a bridge.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ACEDATA_API_TOKEN` | API token from AceDataCloud | **Required** |
-| `ACEDATA_API_BASE_URL` | API base URL | `https://api.acedata.cloud` |
+| `ACEDATACLOUD_API_TOKEN` | API token from AceDataCloud | **Required** |
+| `ACEDATACLOUD_API_BASE_URL` | API base URL | `https://api.acedata.cloud` |
 | `SUNO_DEFAULT_MODEL` | Default model for generation | `chirp-v4-5` |
 | `SUNO_REQUEST_TIMEOUT` | Request timeout in seconds | `180` |
 | `LOG_LEVEL` | Logging level | `INFO` |
