@@ -1,5 +1,7 @@
 """Unit tests for utility functions."""
 
+import json
+
 from core.utils import (
     format_audio_result,
     format_lyrics_result,
@@ -14,26 +16,30 @@ class TestFormatAudioResult:
     def test_format_success(self, mock_audio_response):
         """Test formatting successful audio response."""
         result = format_audio_result(mock_audio_response)
-        assert "Task ID: test-task-123" in result
-        assert "Trace ID: test-trace-456" in result
-        assert "Song 1" in result
-        assert "Test Song" in result
-        assert "120.50s" in result
-        assert "succeeded" in result
-        assert "https://cdn1.suno.ai/test-audio.mp3" in result
+        data = json.loads(result)
+        assert data["success"] is True
+        assert data["task_id"] == "test-task-123"
+        assert data["trace_id"] == "test-trace-456"
+        assert len(data["data"]) == 1
+        assert data["data"][0]["title"] == "Test Song"
+        assert data["data"][0]["duration"] == 120.5
+        assert data["data"][0]["state"] == "succeeded"
+        assert "audio_url" in data["data"][0]
 
     def test_format_error(self, mock_error_response):
         """Test formatting error response."""
         result = format_audio_result(mock_error_response)
-        assert "Error: invalid_request" in result
-        assert "Invalid parameters" in result
+        data = json.loads(result)
+        assert data["success"] is False
+        assert data["error"]["code"] == "invalid_request"
 
     def test_format_empty_data(self):
         """Test formatting response with no audio data."""
         response = {"success": True, "task_id": "123", "data": []}
         result = format_audio_result(response)
-        assert "Task ID: 123" in result
-        assert "Song" not in result
+        data = json.loads(result)
+        assert data["task_id"] == "123"
+        assert data["data"] == []
 
 
 class TestFormatLyricsResult:
@@ -42,15 +48,18 @@ class TestFormatLyricsResult:
     def test_format_success(self, mock_lyrics_response):
         """Test formatting successful lyrics response."""
         result = format_lyrics_result(mock_lyrics_response)
-        assert "Task ID: lyrics-task-123" in result
-        assert "Title: Test Song Title" in result
-        assert "Status: complete" in result
-        assert "Generated lyrics here" in result
+        data = json.loads(result)
+        assert data["success"] is True
+        assert data["task_id"] == "lyrics-task-123"
+        assert data["data"]["title"] == "Test Song Title"
+        assert data["data"]["status"] == "complete"
+        assert "Generated lyrics here" in data["data"]["text"]
 
     def test_format_error(self, mock_error_response):
         """Test formatting error response."""
         result = format_lyrics_result(mock_error_response)
-        assert "Error:" in result
+        data = json.loads(result)
+        assert data["success"] is False
 
 
 class TestFormatTaskResult:
@@ -59,16 +68,18 @@ class TestFormatTaskResult:
     def test_format_success(self, mock_task_response):
         """Test formatting successful task response."""
         result = format_task_result(mock_task_response)
-        assert "Task ID: task-123" in result
-        assert "Action: generate" in result
-        assert "Response: Success" in result
-        assert "Test Song" in result
+        data = json.loads(result)
+        assert data["id"] == "task-123"
+        assert data["request"]["action"] == "generate"
+        assert data["response"]["success"] is True
+        assert data["response"]["data"][0]["title"] == "Test Song"
 
     def test_format_error(self):
         """Test formatting error response."""
         error_response = {"error": {"code": "not_found", "message": "Task not found"}}
         result = format_task_result(error_response)
-        assert "Error: not_found" in result
+        data = json.loads(result)
+        assert data["error"]["code"] == "not_found"
 
 
 class TestFormatPersonaResult:
@@ -77,11 +88,12 @@ class TestFormatPersonaResult:
     def test_format_success(self, mock_persona_response):
         """Test formatting successful persona response."""
         result = format_persona_result(mock_persona_response)
-        assert "Persona Created Successfully" in result
-        assert "persona-id-456" in result
-        assert "generate_with_persona" in result
+        data = json.loads(result)
+        assert data["success"] is True
+        assert data["data"]["persona_id"] == "persona-id-456"
 
     def test_format_error(self, mock_error_response):
         """Test formatting error response."""
         result = format_persona_result(mock_error_response)
-        assert "Error:" in result
+        data = json.loads(result)
+        assert data["success"] is False
