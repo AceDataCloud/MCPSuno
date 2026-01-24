@@ -32,7 +32,9 @@ async def suno_generate_music(
     ] = False,
     callback_url: Annotated[
         str | None,
-        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."),
+        Field(
+            description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."
+        ),
     ] = None,
 ) -> str:
     """Generate AI music from a text prompt using Suno's Inspiration Mode.
@@ -104,7 +106,9 @@ async def suno_generate_custom_music(
     ] = "",
     callback_url: Annotated[
         str | None,
-        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."),
+        Field(
+            description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."
+        ),
     ] = None,
 ) -> str:
     """Generate AI music with full control over lyrics, title, and style (Custom Mode).
@@ -176,7 +180,9 @@ async def suno_extend_music(
     ] = DEFAULT_MODEL,
     callback_url: Annotated[
         str | None,
-        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the extension is complete."),
+        Field(
+            description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the extension is complete."
+        ),
     ] = None,
 ) -> str:
     """Extend an existing song from a specific timestamp with new lyrics.
@@ -237,7 +243,9 @@ async def suno_cover_music(
     ] = DEFAULT_MODEL,
     callback_url: Annotated[
         str | None,
-        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the cover is complete."),
+        Field(
+            description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the cover is complete."
+        ),
     ] = None,
 ) -> str:
     """Create a cover or remix version of an existing song in a different style.
@@ -279,7 +287,9 @@ async def suno_concat_music(
     ],
     callback_url: Annotated[
         str | None,
-        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the concatenation is complete."),
+        Field(
+            description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the concatenation is complete."
+        ),
     ] = None,
 ) -> str:
     """Concatenate extended song segments into a single complete audio file.
@@ -327,7 +337,9 @@ async def suno_generate_with_persona(
     ] = DEFAULT_MODEL,
     callback_url: Annotated[
         str | None,
-        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."),
+        Field(
+            description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."
+        ),
     ] = None,
 ) -> str:
     """Generate music using a saved artist persona for consistent vocal style.
