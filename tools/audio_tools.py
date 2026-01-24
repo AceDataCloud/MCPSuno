@@ -30,6 +30,10 @@ async def suno_generate_music(
             description="If true, generate instrumental music without vocals. Default is false (with vocals)."
         ),
     ] = False,
+    callback_url: Annotated[
+        str | None,
+        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."),
+    ] = None,
 ) -> str:
     """Generate AI music from a text prompt using Suno's Inspiration Mode.
 
@@ -51,6 +55,7 @@ async def suno_generate_music(
         prompt=prompt,
         model=model,
         instrumental=instrumental,
+        callback_url=callback_url,
     )
     return format_audio_result(result)
 
@@ -97,6 +102,10 @@ async def suno_generate_custom_music(
             description="Preferred vocal gender. 'f' for female, 'm' for male, empty string for AI to decide. Only works with v4.5+ models."
         ),
     ] = "",
+    callback_url: Annotated[
+        str | None,
+        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."),
+    ] = None,
 ) -> str:
     """Generate AI music with full control over lyrics, title, and style (Custom Mode).
 
@@ -121,6 +130,7 @@ async def suno_generate_custom_music(
         "title": title,
         "model": model,
         "instrumental": instrumental,
+        "callback_url": callback_url,
     }
 
     if style:
@@ -164,6 +174,10 @@ async def suno_extend_music(
         SunoModel,
         Field(description="Model version to use for the extension."),
     ] = DEFAULT_MODEL,
+    callback_url: Annotated[
+        str | None,
+        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the extension is complete."),
+    ] = None,
 ) -> str:
     """Extend an existing song from a specific timestamp with new lyrics.
 
@@ -187,6 +201,7 @@ async def suno_extend_music(
         "continue_at": continue_at,
         "custom": True,
         "model": model,
+        "callback_url": callback_url,
     }
 
     if style:
@@ -220,6 +235,10 @@ async def suno_cover_music(
         SunoModel,
         Field(description="Model version to use for the cover."),
     ] = DEFAULT_MODEL,
+    callback_url: Annotated[
+        str | None,
+        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the cover is complete."),
+    ] = None,
 ) -> str:
     """Create a cover or remix version of an existing song in a different style.
 
@@ -238,6 +257,7 @@ async def suno_cover_music(
         "action": "cover",
         "audio_id": audio_id,
         "model": model,
+        "callback_url": callback_url,
     }
 
     if prompt:
@@ -257,6 +277,10 @@ async def suno_concat_music(
             description="ID of the LAST segment of an extended song chain. Suno will automatically find and merge all connected segments."
         ),
     ],
+    callback_url: Annotated[
+        str | None,
+        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the concatenation is complete."),
+    ] = None,
 ) -> str:
     """Concatenate extended song segments into a single complete audio file.
 
@@ -274,6 +298,7 @@ async def suno_concat_music(
     result = await client.generate_audio(
         action="concat",
         audio_id=audio_id,
+        callback_url=callback_url,
     )
     return format_audio_result(result)
 
@@ -300,6 +325,10 @@ async def suno_generate_with_persona(
         SunoModel,
         Field(description="Model version to use."),
     ] = DEFAULT_MODEL,
+    callback_url: Annotated[
+        str | None,
+        Field(description="Webhook callback URL for asynchronous notifications. When provided, the API will call this URL when the audio is generated."),
+    ] = None,
 ) -> str:
     """Generate music using a saved artist persona for consistent vocal style.
 
@@ -322,5 +351,6 @@ async def suno_generate_with_persona(
         persona_id=persona_id,
         prompt=prompt,
         model=model,
+        callback_url=callback_url,
     )
     return format_audio_result(result)
