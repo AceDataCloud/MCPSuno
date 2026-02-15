@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Ruff lint + format on staged Python files
+
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM -- "*.py")
+[ -z "$STAGED_PY" ] && exit 0
+
+if ! command -v ruff &>/dev/null; then
+  echo "ruff not found, skipping pre-commit hook"
+  exit 0
+fi
+
+echo "$STAGED_PY" | xargs ruff check --fix --quiet
+echo "$STAGED_PY" | xargs ruff format --quiet
+echo "$STAGED_PY" | xargs git add
+
