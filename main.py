@@ -155,17 +155,29 @@ Environment Variables:
             from core.client import set_request_api_token
 
             class BearerAuthMiddleware:
-                """ASGI middleware that extracts Bearer token from Authorization header."""
+                """ASGI middleware that extracts Bearer token and rejects
+                unauthenticated requests (except /health)."""
 
                 def __init__(self, app):  # type: ignore[no-untyped-def]
                     self.app = app
 
                 async def __call__(self, scope, receive, send):  # type: ignore[no-untyped-def]
                     if scope["type"] == "http":
+                        path = scope.get("path", "")
+                        if path == "/health":
+                            await self.app(scope, receive, send)
+                            return
                         headers = dict(scope.get("headers", []))
                         auth = headers.get(b"authorization", b"").decode()
                         if auth.startswith("Bearer "):
                             set_request_api_token(auth[7:])
+                        else:
+                            response = JSONResponse(
+                                {"error": "Missing or invalid Authorization header"},
+                                status_code=401,
+                            )
+                            await response(scope, receive, send)
+                            return
                     await self.app(scope, receive, send)
 
             async def health(_request: Request) -> JSONResponse:
