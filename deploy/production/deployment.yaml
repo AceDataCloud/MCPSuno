@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mcp-suno
+  name: mcp-suno
+  namespace: acedatacloud
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: mcp-suno
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: mcp-suno
+    spec:
+      containers:
+        - name: mcp-suno
+          image: ghcr.io/acedatacloud/mcp-suno:latest
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      imagePullSecrets:
+        - name: ghcr-login-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mcp-suno
+  name: mcp-suno
+  namespace: acedatacloud
+spec:
+  ports:
+    - name: "8000"
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: mcp-suno
