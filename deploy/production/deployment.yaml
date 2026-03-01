@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: mcp-suno
-          image: ghcr.io/acedatacloud/mcp-suno:latest
+          image: ghcr.io/acedatacloud/mcp-suno:${TAG}
           ports:
             - containerPort: 8000
               protocol: TCP

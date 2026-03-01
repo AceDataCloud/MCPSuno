@@ -1,0 +1,9 @@
+version: "3"
+services:
+  mcp-suno:
+    platform: linux/amd64
+    container_name: "mcp-suno"
+    build: ./
+    image: "ghcr.io/acedatacloud/mcp-suno:${BUILD_NUMBER}"
+    ports:
+      - "8000:8000"
