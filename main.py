@@ -97,13 +97,16 @@ Environment Variables:
     safe_print("")
 
     # Validate configuration
-    if not settings.is_configured:
+    if not settings.is_configured and args.transport != "http":
         safe_print("  [ERROR] ACEDATACLOUD_API_TOKEN not configured!")
         safe_print("  Get your token from https://platform.acedata.cloud")
         safe_print("")
         sys.exit(1)
 
-    safe_print("  [OK] API token configured")
+    if args.transport == "http":
+        safe_print("  [OK] HTTP mode - tokens from request headers")
+    else:
+        safe_print("  [OK] API token configured")
     safe_print("")
 
     # Import tools and prompts to register them
@@ -141,7 +144,43 @@ Environment Variables:
     # Run the server
     try:
         if args.transport == "http":
-            mcp.run(transport="streamable-http", host="0.0.0.0", port=args.port)  # type: ignore[call-arg]
+            import contextlib
+
+            import uvicorn
+            from starlette.applications import Starlette
+            from starlette.routing import Mount
+
+            from core.client import set_request_api_token
+
+            class BearerAuthMiddleware:
+                """ASGI middleware that extracts Bearer token from Authorization header."""
+
+                def __init__(self, app):  # type: ignore[no-untyped-def]
+                    self.app = app
+
+                async def __call__(self, scope, receive, send):  # type: ignore[no-untyped-def]
+                    if scope["type"] == "http":
+                        headers = dict(scope.get("headers", []))
+                        auth = headers.get(b"authorization", b"").decode()
+                        if auth.startswith("Bearer "):
+                            set_request_api_token(auth[7:])
+                    await self.app(scope, receive, send)
+
+            @contextlib.asynccontextmanager
+            async def lifespan(_app: Starlette):  # type: ignore[no-untyped-def]
+                async with mcp.session_manager.run():
+                    yield
+
+            mcp.settings.stateless_http = True
+            mcp.settings.json_response = True
+            mcp.settings.streamable_http_path = "/mcp"
+
+            app = Starlette(
+                routes=[Mount("/", app=mcp.streamable_http_app())],
+                lifespan=lifespan,
+            )
+            app.add_middleware(BearerAuthMiddleware)
+            uvicorn.run(app, host="0.0.0.0", port=args.port)
         else:
             mcp.run(transport="stdio")
     except KeyboardInterrupt:
