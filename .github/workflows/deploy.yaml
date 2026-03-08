@@ -55,3 +55,11 @@ jobs:
 
       - name: Deploy
         run: sh ./deploy/run.sh
+      - name: Verify Deployment
+        if: success()
+        run: |
+          if ! kubectl rollout status deployment/mcp-suno -n acedatacloud --timeout=120s; then
+            echo "Deployment failed, rolling back..."
+            kubectl rollout undo deployment/mcp-suno -n acedatacloud
+            exit 1
+          fi
