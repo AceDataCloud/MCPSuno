@@ -23,14 +23,14 @@ async def suno_list_models() -> str:
     """
     return """Available Suno Models:
 
-| Model           | Version | Prompt Limit | Style Limit | Max Duration |
-|-----------------|---------|--------------|-------------|--------------|
-| chirp-v5        | V5      | 5000 chars   | 1000 chars  | 8 minutes    |
-| chirp-v4-5-plus | V4.5+   | 5000 chars   | 1000 chars  | 8 minutes    |
-| chirp-v4-5      | V4.5    | 5000 chars   | 1000 chars  | 4 minutes    |
-| chirp-v4        | V4      | 3000 chars   | 200 chars   | 150 seconds  |
-| chirp-v3-5      | V3.5    | 3000 chars   | 200 chars   | 120 seconds  |
-| chirp-v3-0      | V3      | 3000 chars   | 200 chars   | 120 seconds  |
+| Model           | Version | Prompt Limit | Lyric Limit  | Style Limit | Max Duration |
+|-----------------|---------|--------------|--------------|-------------|--------------|
+| chirp-v5        | V5      | 200 chars    | 5000 chars   | 1000 chars  | 8 minutes    |
+| chirp-v4-5-plus | V4.5+   | 200 chars    | 5000 chars   | 1000 chars  | 8 minutes    |
+| chirp-v4-5      | V4.5    | 200 chars    | 5000 chars   | 1000 chars  | 4 minutes    |
+| chirp-v4        | V4      | 200 chars    | 3000 chars   | 200 chars   | 150 seconds  |
+| chirp-v3-5      | V3.5    | 200 chars    | 3000 chars   | 200 chars   | 120 seconds  |
+| chirp-v3-0      | V3      | 200 chars    | 3000 chars   | 200 chars   | 120 seconds  |
 
 Recommended: chirp-v4-5 for most use cases, chirp-v5 for best quality.
 
