@@ -169,6 +169,12 @@ Environment Variables:
                         if any(path.startswith(p) for p in self.PUBLIC_PATHS):
                             await self.app(scope, receive, send)
                             return
+                        # Allow SmitheryBot scan requests through for registry scanning
+                        headers = dict(scope.get("headers", []))
+                        user_agent = headers.get(b"user-agent", b"").decode()
+                        if user_agent.startswith("SmitheryBot/"):
+                            await self.app(scope, receive, send)
+                            return
                         headers = dict(scope.get("headers", []))
                         auth = headers.get(b"authorization", b"").decode()
                         api_key = headers.get(b"x-api-key", b"").decode()
