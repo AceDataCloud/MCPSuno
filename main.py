@@ -169,8 +169,11 @@ Environment Variables:
                             return
                         headers = dict(scope.get("headers", []))
                         auth = headers.get(b"authorization", b"").decode()
+                        api_key = headers.get(b"x-api-key", b"").decode()
                         if auth.startswith("Bearer "):
                             set_request_api_token(auth[7:])
+                        elif api_key:
+                            set_request_api_token(api_key)
                         else:
                             response = JSONResponse(
                                 {"error": "Missing or invalid Authorization header"},

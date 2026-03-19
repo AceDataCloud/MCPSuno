@@ -2,6 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/mcp-suno.svg)](https://pypi.org/project/mcp-suno/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/mcp-suno.svg)](https://pypi.org/project/mcp-suno/)
+[![Smithery](https://smithery.ai/badge/acedatacloud/mcp-suno)](https://smithery.ai/server/acedatacloud/mcp-suno)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
@@ -62,6 +63,20 @@ mcp-suno
 
 # Or with Python directly
 python main.py
+```
+
+## Install via Smithery
+
+Install directly through [Smithery](https://smithery.ai/server/acedatacloud/mcp-suno):
+
+```bash
+npx @smithery/cli@latest mcp add acedatacloud/mcp-suno --client claude
+```
+
+Or connect to the hosted remote server:
+
+```
+https://suno.mcp.acedata.cloud/mcp
 ```
 
 ## Claude Desktop Integration

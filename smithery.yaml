@@ -1,0 +1,21 @@
+# Smithery.ai configuration for MCP Suno
+# https://smithery.ai/server/acedatacloud/mcp-suno
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      apiToken:
+        type: string
+        title: AceDataCloud API Token
+        description: "Get your token from https://platform.acedata.cloud"
+    required:
+      - apiToken
+  commandFunction: |-
+    (config) => ({
+      command: "mcp-suno",
+      env: {
+        ACEDATACLOUD_API_TOKEN: config.apiToken
+      }
+    })

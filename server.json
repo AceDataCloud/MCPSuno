@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "acedatacloud/mcp-suno",
+  "description": "MCP Server for Suno AI Music Generation — generate songs, lyrics, covers, remixes, and manage audio projects via AceDataCloud API.",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "pip",
+      "identifier": "mcp-suno"
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://suno.mcp.acedata.cloud/mcp",
+      "description": "Hosted MCP Suno server. Requires a Bearer token from AceDataCloud Platform (https://platform.acedata.cloud)."
+    }
+  ]
+}

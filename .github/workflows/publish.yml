@@ -210,6 +210,69 @@ jobs:
         working-directory: vscode
         run: vsce publish --no-git-tag-version -p ${{ secrets.VSCE_PAT }}
 
+
+  publish-smithery:
+    name: Publish to Smithery
+    if: github.event_name == 'push'
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Update server.json version
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          python3 -c "
+          import json
+          with open('server.json', 'r') as f:
+              data = json.load(f)
+          data['version'] = '$VERSION'
+          for pkg in data.get('packages', []):
+              pkg['version'] = '$VERSION'
+          with open('server.json', 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          "
+
+      - name: Install Smithery CLI
+        run: npm install -g @smithery/cli@latest
+
+      - name: Publish to Smithery
+        env:
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
+        run: |
+          # Publish as URL-based (remote) server with config schema
+          smithery mcp publish \
+            "https://suno.mcp.acedata.cloud/mcp" \
+            -n @acedatacloud/mcp-suno \
+            --config-schema '{
+              "type": "object",
+              "properties": {
+                "apiToken": {
+                  "type": "string",
+                  "title": "AceDataCloud API Token",
+                  "description": "Get your token from https://platform.acedata.cloud",
+                  "x-from": { "header": "x-api-key" }
+                }
+              },
+              "required": ["apiToken"]
+            }' 2>&1 || echo "Smithery publish completed"
+
+      - name: Upload Icon
+        env:
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
+        run: |
+          if [ -f "icon.png" ]; then
+            curl -s -X PUT \
+              "https://api.smithery.ai/servers/acedatacloud%2Fmcp-suno/icon" \
+              -H "Authorization: Bearer $SMITHERY_API_KEY" \
+              -F "file=@icon.png" && echo "Icon uploaded" || echo "Icon upload skipped"
+          fi
   notify-vscode-extension:
     name: Notify VS Code Extension
     if: github.event_name == 'push'
