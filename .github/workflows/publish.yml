@@ -246,7 +246,7 @@ jobs:
           SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
         run: |
           smithery auth login --api-key "$SMITHERY_API_KEY" 2>/dev/null || true
-          smithery mcp publish --name @acedatacloud/mcp-suno --transport stdio 2>&1 || echo "Smithery publish completed (may need manual first-time setup)"
+          smithery mcp publish --name @acedatacloud-mcp/mcp-suno --transport stdio 2>&1 || echo "Smithery publish completed (may need manual first-time setup)"
 
   notify-vscode-extension:
     name: Notify VS Code Extension
