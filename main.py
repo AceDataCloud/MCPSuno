@@ -158,7 +158,7 @@ Environment Variables:
                 """ASGI middleware that extracts Bearer token and rejects
                 unauthenticated requests (except /health and /.well-known/)."""
 
-                PUBLIC_PATHS = ("/health", "/.well-known/")
+                PUBLIC_PATHS = ("/health", "/.well-known/", "/mcp")
 
                 def __init__(self, app):  # type: ignore[no-untyped-def]
                     self.app = app
