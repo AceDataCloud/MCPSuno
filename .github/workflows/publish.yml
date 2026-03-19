@@ -81,7 +81,6 @@ jobs:
       - name: Build package
         run: python -m build
 
-
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -135,6 +134,42 @@ jobs:
             --title "v${{ needs.build.outputs.version }}" \
             --generate-notes \
             --repo '${{ github.repository }}' || echo "Release already exists, skipping"
+
+  publish-mcp-registry:
+    name: Publish to MCP Registry
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update server.json version
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          python3 -c "
+          import json
+          with open('server.json', 'r') as f:
+              data = json.load(f)
+          data['version'] = '$VERSION'
+          for pkg in data.get('packages', []):
+              pkg['version'] = '$VERSION'
+          with open('server.json', 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          "
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        run: ./mcp-publisher publish
 
   publish-vscode:
     name: Publish VS Code Extension
@@ -271,8 +306,8 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       - name: Generate version
         id: jb_version
