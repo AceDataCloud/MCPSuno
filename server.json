@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.acedatacloud/mcp-suno",
+  "description": "MCP server for Suno AI music generation, lyrics, and covers",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/AceDataCloud/MCPSuno",
+    "source": "github"
+  },
+  "website_url": "https://platform.acedata.cloud",
+  "packages": [
+    {
+      "registry_type": "pypi",
+      "identifier": "mcp-suno",
+      "version": "0.1.0",
+      "runtime_hint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environment_variables": [
+        {
+          "name": "ACEDATACLOUD_API_TOKEN",
+          "description": "API token from Ace Data Cloud (https://platform.acedata.cloud)",
+          "is_required": true,
+          "is_secret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://suno.mcp.acedata.cloud/mcp"
+    }
+  ]
+}
