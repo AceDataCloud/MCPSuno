@@ -1,0 +1,77 @@
+<idea-plugin>
+    <id>com.acedatacloud.mcp.suno</id>
+    <name>Suno MCP</name>
+    <vendor email="dev@acedata.cloud" url="https://acedata.cloud">Ace Data Cloud</vendor>
+
+    <description><![CDATA[
+<p><b>AI Music Generation</b> with <a href="https://suno.com">Suno</a> via
+<a href="https://modelcontextprotocol.io">Model Context Protocol (MCP)</a>.</p>
+
+<p>This plugin helps you set up the MCP Suno server with JetBrains AI Assistant.
+Once configured, AI Assistant can generate songs, lyrics, covers, remixes, and more
+using Suno AI — all powered by <a href="https://platform.acedata.cloud">Ace Data Cloud</a>.</p>
+
+<h3>Features</h3>
+<ul>
+    <li><b>27 AI Music Tools</b> — Generate, extend, cover, remix, mashup, stems, and more</li>
+    <li><b>Easy Setup</b> — One-click copy MCP configuration for AI Assistant</li>
+    <li><b>Dual Mode</b> — STDIO (local) and HTTP (remote) server support</li>
+    <li><b>Token Management</b> — Store API token securely in IDE settings</li>
+</ul>
+
+<h3>Available Tools</h3>
+<ul>
+    <li><b>Generate</b> — Create songs from text prompts or custom lyrics</li>
+    <li><b>Extend</b> — Continue a song from a specific timestamp</li>
+    <li><b>Cover</b> — Create covers and remixes in different styles</li>
+    <li><b>Mashup</b> — Blend multiple songs together</li>
+    <li><b>Stems</b> — Separate vocals and instruments</li>
+    <li><b>Lyrics</b> — Generate and optimize lyrics</li>
+    <li><b>Persona</b> — Save and reuse voice styles</li>
+    <li><b>Export</b> — Get MP4, WAV, MIDI, and timing data</li>
+</ul>
+
+<h3>Quick Start</h3>
+<ol>
+    <li>Install this plugin</li>
+    <li>Open <b>Settings → Tools → Suno MCP</b></li>
+    <li>Enter your <a href="https://platform.acedata.cloud">Ace Data Cloud</a> API token</li>
+    <li>Click <b>Copy Config</b> and paste into <b>Settings → Tools → AI Assistant → MCP</b></li>
+</ol>
+
+<p>Requires <a href="https://github.com/astral-sh/uv">uv</a> (Python package runner) for STDIO mode,
+or use HTTP mode for zero-install remote access.</p>
+]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+            serviceImplementation="com.acedatacloud.mcp.suno.McpSunoSettings"/>
+
+        <applicationConfigurable
+            id="com.acedatacloud.mcp.suno.settings"
+            displayName="Suno MCP"
+            parentId="tools"
+            instance="com.acedatacloud.mcp.suno.McpSunoSettingsConfigurable"/>
+
+        <postStartupActivity
+            implementation="com.acedatacloud.mcp.suno.McpSunoStartupActivity"/>
+
+        <notificationGroup id="Suno MCP" displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <group id="McpSuno.Actions" text="Suno MCP" popup="true">
+            <action id="McpSuno.CopyStdioConfig"
+                class="com.acedatacloud.mcp.suno.CopyStdioConfigAction"
+                text="Copy STDIO Config"
+                description="Copy STDIO MCP configuration for AI Assistant"/>
+            <action id="McpSuno.CopyHttpConfig"
+                class="com.acedatacloud.mcp.suno.CopyHttpConfigAction"
+                text="Copy HTTP Config"
+                description="Copy HTTP MCP configuration for AI Assistant"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </group>
+    </actions>
+</idea-plugin>
