@@ -1,5 +1,7 @@
 # MCP Suno
 
+<!-- mcp-name: io.github.acedatacloud/mcp-suno -->
+
 [![PyPI version](https://img.shields.io/pypi/v/mcp-suno.svg)](https://pypi.org/project/mcp-suno/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/mcp-suno.svg)](https://pypi.org/project/mcp-suno/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
