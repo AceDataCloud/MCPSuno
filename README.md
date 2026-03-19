@@ -24,93 +24,24 @@ Generate AI music, lyrics, and manage audio projects directly from Claude, VS Co
 
 ## Quick Start
 
-### 1. Get API Token
+### 1. Get Your API Token
 
-Get your API token from [AceDataCloud Platform](https://platform.acedata.cloud):
+1. Sign up at [AceDataCloud Platform](https://platform.acedata.cloud)
+2. Go to the [API documentation page](https://platform.acedata.cloud/documents/4da95d9d-7722-4a72-857d-bf6be86036e9)
+3. Click **"Acquire"** to get your API token
+4. Copy the token for use below
 
-1. Sign up or log in
-2. Navigate to [Suno Audios API](https://platform.acedata.cloud/documents/4da95d9d-7722-4a72-857d-bf6be86036e9)
-3. Click "Acquire" to get your token
+### 2. Use the Hosted Server (Recommended)
 
-### 2. Install
+AceDataCloud hosts a managed MCP server — **no local installation required**.
 
-```bash
-# Clone the repository
-git clone https://github.com/AceDataCloud/mcp-suno.git
-cd mcp-suno
+**Endpoint:** `https://suno.mcp.acedata.cloud/mcp`
 
-# Install with pip
-pip install -e .
+All requests require a Bearer token. Use the API token from Step 1.
 
-# Or with uv (recommended)
-uv pip install -e .
-```
+#### Claude Desktop
 
-### 3. Configure
-
-```bash
-# Copy example environment file
-cp .env.example .env
-
-# Edit with your API token
-echo "ACEDATACLOUD_API_TOKEN=your_token_here" > .env
-```
-
-### 4. Run
-
-```bash
-# Run the server
-mcp-suno
-
-# Or with Python directly
-python main.py
-```
-
-## Claude Desktop Integration
-
-Add to your Claude Desktop configuration:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "suno": {
-      "command": "mcp-suno",
-      "env": {
-        "ACEDATACLOUD_API_TOKEN": "your_api_token_here"
-      }
-    }
-  }
-}
-```
-
-Or if using uv:
-
-```json
-{
-  "mcpServers": {
-    "suno": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/mcp-suno", "mcp-suno"],
-      "env": {
-        "ACEDATACLOUD_API_TOKEN": "your_api_token_here"
-      }
-    }
-  }
-}
-```
-
-## Remote HTTP Mode (Hosted)
-
-AceDataCloud hosts a managed MCP server that you can connect to directly — **no local installation required**.
-
-**Endpoint**: `https://suno.mcp.acedata.cloud/mcp`
-
-All requests require a Bearer token in the `Authorization` header. Get your token from [AceDataCloud Platform](https://platform.acedata.cloud).
-
-### Claude Desktop (Remote)
+Add to your config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
@@ -119,28 +50,56 @@ All requests require a Bearer token in the `Authorization` header. Get your toke
       "type": "streamable-http",
       "url": "https://suno.mcp.acedata.cloud/mcp",
       "headers": {
-        "Authorization": "Bearer your_api_token_here"
+        "Authorization": "Bearer YOUR_API_TOKEN"
       }
     }
   }
 }
 ```
 
-### Cursor / VS Code
+#### Cursor / Windsurf
 
-In your MCP client settings, add:
+Add to your MCP config (`.cursor/mcp.json` or `.windsurf/mcp.json`):
 
-- **Type**: `streamable-http`
-- **URL**: `https://suno.mcp.acedata.cloud/mcp`
-- **Headers**: `Authorization: Bearer your_api_token_here`
+```json
+{
+  "mcpServers": {
+    "suno": {
+      "type": "streamable-http",
+      "url": "https://suno.mcp.acedata.cloud/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_TOKEN"
+      }
+    }
+  }
+}
+```
 
-### JetBrains IDEs
+#### VS Code (Copilot)
 
-Install the [Suno MCP plugin](https://plugins.jetbrains.com/plugin/com.acedatacloud.mcp.suno) from the JetBrains Marketplace, or configure manually:
+Add to your VS Code MCP config (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "suno": {
+      "type": "streamable-http",
+      "url": "https://suno.mcp.acedata.cloud/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_TOKEN"
+      }
+    }
+  }
+}
+```
+
+Or install the [Ace Data Cloud MCP extension](https://marketplace.visualstudio.com/items?itemName=acedatacloud.acedatacloud-mcp) for VS Code, which bundles all 11 MCP servers with one-click setup.
+
+#### JetBrains IDEs
 
 1. Go to **Settings → Tools → AI Assistant → Model Context Protocol (MCP)**
-2. Click **Add** and select **HTTP**
-3. Paste this configuration:
+2. Click **Add** → **HTTP**
+3. Paste:
 
 ```json
 {
@@ -148,35 +107,71 @@ Install the [Suno MCP plugin](https://plugins.jetbrains.com/plugin/com.acedatacl
     "suno": {
       "url": "https://suno.mcp.acedata.cloud/mcp",
       "headers": {
-        "Authorization": "Bearer your_api_token_here"
+        "Authorization": "Bearer YOUR_API_TOKEN"
       }
     }
   }
 }
 ```
 
-### cURL Test
+#### cURL Test
 
 ```bash
 # Health check (no auth required)
 curl https://suno.mcp.acedata.cloud/health
 
-# MCP initialize (requires Bearer token)
+# MCP initialize
 curl -X POST https://suno.mcp.acedata.cloud/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  -H "Authorization: Bearer your_api_token_here" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
 
-### Self-Hosting with Docker
+### 3. Or Run Locally (Alternative)
+
+If you prefer to run the server on your own machine:
+
+```bash
+# Install from PyPI
+pip install mcp-suno
+# or
+uvx mcp-suno
+
+# Set your API token
+export ACEDATACLOUD_API_TOKEN="your_token_here"
+
+# Run (stdio mode for Claude Desktop / local clients)
+mcp-suno
+
+# Run (HTTP mode for remote access)
+mcp-suno --transport http --port 8000
+```
+
+#### Claude Desktop (Local)
+
+```json
+{
+  "mcpServers": {
+    "suno": {
+      "command": "uvx",
+      "args": ["mcp-suno"],
+      "env": {
+        "ACEDATACLOUD_API_TOKEN": "your_token_here"
+      }
+    }
+  }
+}
+```
+
+#### Docker (Self-Hosting)
 
 ```bash
 docker pull ghcr.io/acedatacloud/mcp-suno:latest
 docker run -p 8000:8000 ghcr.io/acedatacloud/mcp-suno:latest
 ```
 
-Clients connect with their own Bearer token — the server extracts the token from each request's `Authorization` header and uses it for upstream API calls.
+Clients connect with their own Bearer token — the server extracts the token from each request's `Authorization` header.
 
 ## Available Tools
 
