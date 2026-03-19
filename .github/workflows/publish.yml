@@ -259,3 +259,57 @@ jobs:
             "https://api.github.com/repos/AceDataCloud/VSCodeMCP/dispatches" \
             -d '{"event_type":"mcp-updated","client_payload":{"source":"${{ github.repository }}","version":"${{ needs.build.outputs.version }}"}}'
           echo "Triggered VSCodeMCP extension rebuild"
+
+  publish-jetbrains:
+    name: Publish JetBrains Plugin
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Generate version
+        id: jb_version
+        run: |
+          # Use CalVer: YYYY.M.BUILD
+          YEAR=$(date +'%Y')
+          MONTH=$(date +'%-m')
+          VERSION_PREFIX="${YEAR}.${MONTH}"
+          # Query JetBrains Marketplace for latest version today
+          BUILD=$(python3 -c "
+          import urllib.request, json
+          try:
+              url = 'https://plugins.jetbrains.com/api/plugins/com.acedatacloud.mcp.suno/updates?channel=&size=5'
+              req = urllib.request.Request(url, headers={'Accept': 'application/json'})
+              resp = urllib.request.urlopen(req, timeout=10)
+              updates = json.loads(resp.read())
+              prefix = '${VERSION_PREFIX}.'
+              builds = [int(u['version'].split('.')[-1]) for u in updates if u['version'].startswith(prefix)]
+              print(max(builds) + 1 if builds else 0)
+          except:
+              print(0)
+          ")
+          VERSION="${VERSION_PREFIX}.${BUILD}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing JetBrains plugin version $VERSION"
+
+      - name: Update plugin version
+        working-directory: jetbrains
+        run: |
+          sed -i "s/pluginVersion = .*/pluginVersion = ${{ steps.jb_version.outputs.version }}/" gradle.properties
+
+      - name: Build plugin
+        working-directory: jetbrains
+        run: ./gradlew buildPlugin
+
+      - name: Publish to JetBrains Marketplace
+        working-directory: jetbrains
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+        run: ./gradlew publishPlugin
