@@ -36,6 +36,19 @@ class Settings:
     transport: str = field(default_factory=lambda: os.getenv("MCP_TRANSPORT", "stdio"))
     log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
 
+    # OAuth / Remote Auth Configuration
+    server_url: str = field(default_factory=lambda: os.getenv("MCP_SERVER_URL", ""))
+    auth_base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "ACEDATACLOUD_AUTH_BASE_URL", "https://auth.acedata.cloud"
+        )
+    )
+    platform_base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "ACEDATACLOUD_PLATFORM_BASE_URL", "https://platform.acedata.cloud"
+        )
+    )
+
     def validate(self) -> None:
         """Validate required settings."""
         if not self.api_token:

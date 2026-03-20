@@ -28,6 +28,9 @@ spec:
           ports:
             - containerPort: 8000
               protocol: TCP
+          env:
+            - name: MCP_SERVER_URL
+              value: "https://suno.mcp.acedata.cloud"
           resources:
             limits:
               cpu: 500m
