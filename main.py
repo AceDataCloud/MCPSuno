@@ -152,45 +152,7 @@ Environment Variables:
             from starlette.responses import JSONResponse
             from starlette.routing import Mount, Route
 
-            from core.client import set_request_api_token
-
-            class BearerAuthMiddleware:
-                """ASGI middleware that extracts Bearer token and rejects
-                unauthenticated requests (except /health and /.well-known/)."""
-
-                PUBLIC_PATHS = ("/health", "/.well-known/", "/mcp")
-
-                def __init__(self, app):  # type: ignore[no-untyped-def]
-                    self.app = app
-
-                async def __call__(self, scope, receive, send):  # type: ignore[no-untyped-def]
-                    if scope["type"] == "http":
-                        path = scope.get("path", "")
-                        if any(path.startswith(p) for p in self.PUBLIC_PATHS):
-                            await self.app(scope, receive, send)
-                            return
-                        # Allow SmitheryBot scan requests through for registry scanning
-                        headers = dict(scope.get("headers", []))
-                        user_agent = headers.get(b"user-agent", b"").decode()
-                        if user_agent.startswith("SmitheryBot/"):
-                            await self.app(scope, receive, send)
-                            return
-                        headers = dict(scope.get("headers", []))
-                        auth = headers.get(b"authorization", b"").decode()
-                        api_key = headers.get(b"x-api-key", b"").decode()
-                        if auth.startswith("Bearer "):
-                            set_request_api_token(auth[7:])
-                        elif api_key:
-                            set_request_api_token(api_key)
-                            set_request_api_token(auth[7:])
-                        else:
-                            response = JSONResponse(
-                                {"error": "Missing or invalid Authorization header"},
-                                status_code=401,
-                            )
-                            await response(scope, receive, send)
-                            return
-                    await self.app(scope, receive, send)
+            from core.server import oauth_provider
 
             async def health(_request: Request) -> JSONResponse:
                 return JSONResponse({"status": "ok"})
@@ -323,15 +285,19 @@ Environment Variables:
             mcp.settings.json_response = True
             mcp.settings.streamable_http_path = "/mcp"
 
-            app = Starlette(
-                routes=[
-                    Route("/health", health),
-                    Route("/.well-known/mcp/server-card.json", server_card),
-                    Mount("/", app=mcp.streamable_http_app()),
-                ],
-                lifespan=lifespan,
-            )
-            app.add_middleware(BearerAuthMiddleware)
+            # Build routes
+            routes: list[Route | Mount] = [
+                Route("/health", health),
+                Route("/.well-known/mcp/server-card.json", server_card),
+            ]
+
+            # Add OAuth callback route if OAuth is enabled
+            if oauth_provider:
+                routes.append(Route("/oauth/callback", oauth_provider.handle_callback))
+
+            routes.append(Mount("/", app=mcp.streamable_http_app()))
+
+            app = Starlette(routes=routes, lifespan=lifespan)
             uvicorn.run(app, host="0.0.0.0", port=args.port)
         else:
             mcp.run(transport="stdio")
