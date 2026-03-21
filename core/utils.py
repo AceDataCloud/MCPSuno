@@ -17,7 +17,7 @@ def _with_submission_guidance(
         "task_id": task_id,
         "poll_tool": poll_tool,
         "batch_poll_tool": batch_poll_tool,
-        "next_step": f"Call {poll_tool}(task_id=\"{task_id}\") to poll until the task completes and the final media URLs are available.",
+        "next_step": f'Call {poll_tool}(task_id="{task_id}") to poll until the task completes and the final media URLs are available.',
     }
     return payload
 
@@ -35,7 +35,7 @@ def _with_task_guidance(
         "task_id": task_id,
         "poll_tool": poll_tool,
         "batch_poll_tool": batch_poll_tool,
-        "next_step": f"If the task is still pending or processing, call {poll_tool}(task_id=\"{task_id}\") again later.",
+        "next_step": f'If the task is still pending or processing, call {poll_tool}(task_id="{task_id}") again later.',
     }
     return payload
 
