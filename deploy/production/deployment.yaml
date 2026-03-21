@@ -31,6 +31,8 @@ spec:
           env:
             - name: MCP_SERVER_URL
               value: "https://suno.mcp.acedata.cloud"
+            - name: ACEDATACLOUD_OAUTH_CLIENT_ID
+              value: "jzgkKj3lhBNXLb73kw9M-2ZuDuRYoUf73CUcY_P4QII"
           resources:
             limits:
               cpu: 500m
