@@ -92,9 +92,16 @@ jobs:
         run: |
           echo "Waiting for Copilot to process issue #$ISSUE_NUMBER..."
 
-          # Poll for a PR linked to the copilot branch (up to 15 min)
+          # Poll for Copilot to finish (up to 15 min)
           for i in $(seq 1 45); do
             echo "Poll attempt $i/45..."
+
+            # Check if Copilot closed the issue (no changes needed)
+            ISSUE_STATE=$(gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" --json state --jq '.state')
+            if [ "$ISSUE_STATE" = "CLOSED" ]; then
+              echo "Issue #$ISSUE_NUMBER was closed — Copilot determined no changes needed."
+              exit 0
+            fi
 
             # Check if a copilot branch PR exists
             PR_JSON=$(gh pr list --repo "${{ github.repository }}" \
@@ -104,29 +111,29 @@ jobs:
             if [ -n "$PR_JSON" ]; then
               PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
               PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
-              IS_DRAFT=$(echo "$PR_JSON" | jq -r '.isDraft')
-              echo "Found PR #$PR_NUMBER: $PR_TITLE (draft=$IS_DRAFT)"
+              HEAD_BRANCH=$(echo "$PR_JSON" | jq -r '.headRefName')
+              echo "Found PR #$PR_NUMBER: $PR_TITLE (branch=$HEAD_BRANCH)"
 
-              # If still draft, Copilot is still working — wait for it to be ready
-              if [ "$IS_DRAFT" = "true" ]; then
-                echo "PR is still draft, Copilot still working... waiting 20s"
-                sleep 20
-                continue
+              # Check if Copilot coding agent workflow has completed for this branch
+              AGENT_STATUS=$(gh api "/repos/${{ github.repository }}/actions/runs?branch=$HEAD_BRANCH&event=dynamic" \
+                --jq '[.workflow_runs[] | select(.name == "Copilot coding agent")] | .[0].conclusion // "pending"' 2>/dev/null || echo "pending")
+
+              echo "Copilot agent status: $AGENT_STATUS"
+
+              if [ "$AGENT_STATUS" = "success" ]; then
+                # Copilot is done — mark ready if draft and merge
+                echo "Copilot agent completed. Merging PR #$PR_NUMBER..."
+                gh pr ready "$PR_NUMBER" --repo "${{ github.repository }}" 2>/dev/null || true
+                gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" --squash \
+                  --admin --subject "sync: update from Docs [automated]"
+                echo "✅ PR #$PR_NUMBER merged successfully!"
+                exit 0
+              elif [ "$AGENT_STATUS" = "failure" ]; then
+                echo "❌ Copilot agent failed. Manual intervention needed."
+                exit 1
+              else
+                echo "Copilot still working... waiting 20s"
               fi
-
-              # PR is ready — merge it
-              echo "PR #$PR_NUMBER is ready, merging with admin bypass..."
-              gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" --squash \
-                --admin --subject "sync: update from Docs [automated]"
-              echo "✅ PR #$PR_NUMBER merged successfully!"
-              exit 0
-            fi
-
-            # Also check if Copilot closed the issue (meaning no changes needed)
-            ISSUE_STATE=$(gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" --json state --jq '.state')
-            if [ "$ISSUE_STATE" = "CLOSED" ]; then
-              echo "Issue #$ISSUE_NUMBER was closed — Copilot determined no changes needed."
-              exit 0
             fi
 
             sleep 20
