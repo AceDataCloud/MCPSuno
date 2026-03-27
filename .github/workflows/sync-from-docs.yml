@@ -35,6 +35,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.CLAUDE_CODE_API_KEY }}
           github_token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          show_full_output: true
           prompt: |
             The upstream AceDataCloud Docs have been updated. They are checked out at `_docs/`.
             Your job: ensure this MCP server stays in sync with the latest Docs.
@@ -51,7 +52,6 @@ jobs:
         env:
           ANTHROPIC_BASE_URL: ${{ vars.CLAUDE_CODE_API_BASE || 'https://api.acedata.cloud' }}
           ANTHROPIC_AUTH_TOKEN: ${{ secrets.CLAUDE_CODE_API_KEY }}
-          ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-20250514
 
       - name: Merge PR
         if: steps.claude.outputs.branch_name != ''
