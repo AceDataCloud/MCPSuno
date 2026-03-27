@@ -13,6 +13,8 @@ jobs:
   create-task:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      issue_number: ${{ steps.create-issue.outputs.issue_number }}
     steps:
       - name: Checkout Docs
         uses: actions/checkout@v4
@@ -38,12 +40,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
-          # Close any existing open auto-sync issues to avoid duplicates
           gh issue list --repo "${{ github.repository }}" --label "auto-sync" --state open --json number --jq '.[].number' | while read -r num; do
             gh issue close "$num" --repo "${{ github.repository }}" --comment "Superseded by new sync trigger." 2>/dev/null || true
           done
 
       - name: Create issue for Copilot
+        id: create-issue
         env:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
           COMMIT_INFO: ${{ steps.docs.outputs.commit_info }}
@@ -54,7 +56,7 @@ jobs:
             --arg changes "$RECENT_CHANGES" \
             '"The upstream Docs have been updated. Ensure this MCP server is in sync with the latest API spec.\n\n## Recent Docs Changes\n\n```\n" + $changes + "\n```\n\n## Instructions\n\nSee `.github/copilot-instructions.md` and `CLAUDE.md` for sync rules.\n\nSource of truth: the Docs repo OpenAPI spec at `openapi/suno.json`.\n\nCompare models, endpoints, and parameters against this repo'\''s code. Fix any differences."')
 
-          jq -n \
+          ISSUE_URL=$(jq -n \
             --arg title "sync: update from Docs ($COMMIT_INFO)" \
             --argjson body "$body" \
             --arg repo "$REPO" \
@@ -73,4 +75,63 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             /repos/"$REPO"/issues \
-            --input -
+            --input - --jq '.number')
+
+          echo "Created issue #$ISSUE_URL"
+          echo "issue_number=$ISSUE_URL" >> "$GITHUB_OUTPUT"
+
+  wait-and-merge:
+    needs: create-task
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for Copilot PR and merge
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ needs.create-task.outputs.issue_number }}
+        run: |
+          echo "Waiting for Copilot to process issue #$ISSUE_NUMBER..."
+
+          # Poll for a PR linked to the copilot branch (up to 15 min)
+          for i in $(seq 1 45); do
+            echo "Poll attempt $i/45..."
+
+            # Check if a copilot branch PR exists
+            PR_JSON=$(gh pr list --repo "${{ github.repository }}" \
+              --state open --json number,title,author,isDraft,headRefName \
+              --jq '[.[] | select(.headRefName | startswith("copilot/"))] | .[0] // empty')
+
+            if [ -n "$PR_JSON" ]; then
+              PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+              PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
+              IS_DRAFT=$(echo "$PR_JSON" | jq -r '.isDraft')
+              echo "Found PR #$PR_NUMBER: $PR_TITLE (draft=$IS_DRAFT)"
+
+              # If still draft, Copilot is still working — wait for it to be ready
+              if [ "$IS_DRAFT" = "true" ]; then
+                echo "PR is still draft, Copilot still working... waiting 20s"
+                sleep 20
+                continue
+              fi
+
+              # PR is ready — merge it
+              echo "PR #$PR_NUMBER is ready, merging with admin bypass..."
+              gh pr merge "$PR_NUMBER" --repo "${{ github.repository }}" --squash \
+                --admin --subject "sync: update from Docs [automated]"
+              echo "✅ PR #$PR_NUMBER merged successfully!"
+              exit 0
+            fi
+
+            # Also check if Copilot closed the issue (meaning no changes needed)
+            ISSUE_STATE=$(gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" --json state --jq '.state')
+            if [ "$ISSUE_STATE" = "CLOSED" ]; then
+              echo "Issue #$ISSUE_NUMBER was closed — Copilot determined no changes needed."
+              exit 0
+            fi
+
+            sleep 20
+          done
+
+          echo "⚠️ Timeout: No PR found after 15 minutes. Copilot may still be working."
+          echo "Check issue #$ISSUE_NUMBER for status."
+          exit 1
