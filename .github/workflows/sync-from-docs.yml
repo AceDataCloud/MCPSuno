@@ -12,137 +12,84 @@ permissions:
   id-token: write
 
 jobs:
-  create-sync-issue:
+  sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
-      - name: Checkout this repo
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Checkout Docs repo
+      - name: Checkout Docs
         uses: actions/checkout@v4
         with:
           repository: AceDataCloud/Docs
           path: _docs
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          fetch-depth: 5
 
-      - name: Extract Docs source of truth
-        id: docs
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_API_KEY }}
+          github_token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          prompt: |
+            The upstream AceDataCloud Docs have been updated. They are checked out at `_docs/`.
+            Your job: ensure this MCP server stays in sync with the latest Docs.
+
+            Source of truth: `_docs/openapi/suno.json` (the Suno API OpenAPI spec).
+
+            Check recent Docs changes (`cd _docs && git log --oneline -5`), then compare
+            the current spec against this repo's code. Fix any differences in model types,
+            tool definitions, parameters, or documentation.
+
+            Read this repo's CLAUDE.md for detailed sync rules.
+
+            If everything is already in sync, make no changes.
+        env:
+          ANTHROPIC_BASE_URL: ${{ vars.CLAUDE_CODE_API_BASE }}
+          ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-20250514
+
+      - name: Merge PR
+        if: steps.claude.outputs.branch_name != ''
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
         run: |
-          cd _docs
+          branch="${{ steps.claude.outputs.branch_name }}"
 
-          # 1. Extract model enum from OpenAPI spec
-          models="(not found)"
-          if [ -f openapi/suno.json ]; then
-            models=$(python3 -c "
-          import json
-          with open('openapi/suno.json') as f:
-              spec = json.load(f)
-          for path, methods in spec.get('paths', {}).items():
-              for method, op in methods.items():
-                  rb = op.get('requestBody', {})
-                  for ct, mt in rb.get('content', {}).items():
-                      props = mt.get('schema', {}).get('properties', {})
-                      if 'model' in props:
-                          for m in props['model'].get('enum', []):
-                              print(m)
-          " 2>/dev/null | sort -u | tr '\n' ', ' | sed 's/,$//')
+          # Find the PR created by Claude for this branch
+          pr_number=$(gh pr list --head "$branch" --state open \
+            --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
+            echo "No PR found for branch $branch"
+            exit 0
           fi
 
-          # 2. Extract API endpoints
-          endpoints="(not found)"
-          if [ -f openapi/suno.json ]; then
-            endpoints=$(python3 -c "
-          import json
-          with open('openapi/suno.json') as f:
-              spec = json.load(f)
-          for path, methods in spec.get('paths', {}).items():
-              for method, op in methods.items():
-                  summary = op.get('summary', '')
-                  print(f'{method.upper()} {path} — {summary}')
-          " 2>/dev/null)
-          fi
+          echo "Found PR #$pr_number (branch: $branch). Waiting for CI..."
 
-          # 3. Last commit info
-          commit_info=$(git log -1 --pretty=format:"%h %s" 2>/dev/null || echo "unknown")
+          max_attempts=30
+          for i in $(seq 1 $max_attempts); do
+            sleep 30
+            status=$(gh pr checks "$pr_number" --json name,state \
+              --jq '[.[] | select(.name != "Sync from Docs")] |
+                if length == 0 then "pass"
+                elif all(.state == "SUCCESS" or .state == "SKIPPED") then "pass"
+                elif any(.state == "FAILURE") then "fail"
+                else "pending" end' 2>/dev/null || echo "pending")
+            echo "Attempt $i/$max_attempts: $status"
+            if [ "$status" = "pass" ]; then
+              echo "CI passed!"
+              break
+            elif [ "$status" = "fail" ]; then
+              echo "CI failed. Skipping merge."
+              exit 1
+            fi
+          done
 
-          # Save to files for issue body
-          echo "$models" > /tmp/models.txt
-          echo "$endpoints" > /tmp/endpoints.txt
-          echo "$commit_info" > /tmp/commit_info.txt
-
-      - name: Check for existing open sync issue
-        id: existing
-        env:
-          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-        run: |
-          existing=$(gh issue list --label "auto-sync" --state open --json number --jq '.[0].number // empty')
-          if [ -n "$existing" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "issue_number=$existing" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create sync issue
-        if: steps.existing.outputs.exists != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-        run: |
-          models=$(cat /tmp/models.txt)
-          endpoints=$(cat /tmp/endpoints.txt)
-          commit_info=$(cat /tmp/commit_info.txt)
-
-          gh issue create \
-            --title "sync: update from Docs ($commit_info)" \
-            --label "auto-sync" \
-            --body "$(cat <<EOF
-          @claude
-
-          The upstream Docs have been updated. Make sure this MCP server is in sync with the latest API spec.
-
-          ## Source of Truth
-
-          The Docs OpenAPI spec defines these **models** for Suno:
-
-          \`\`\`
-          $models
-          \`\`\`
-
-          And these **endpoints**:
-
-          \`\`\`
-          $endpoints
-          \`\`\`
-
-          ## What to Do
-
-          1. Compare the models above against \`core/types.py\` (the \`SunoModel\` Literal). Add any missing models, remove any that are no longer in the spec.
-          2. Compare the endpoints above against the tools in \`tools/\`. Add tools for new endpoints if needed.
-          3. Update \`README.md\` model table if the model list changed.
-          4. If nothing needs changing, just close this issue with a comment.
-          5. If changes are needed, create a PR.
-          EOF
-          )"
-
-      - name: Update existing issue
-        if: steps.existing.outputs.exists == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-        run: |
-          models=$(cat /tmp/models.txt)
-          commit_info=$(cat /tmp/commit_info.txt)
-
-          gh issue comment "${{ steps.existing.outputs.issue_number }}" \
-            --body "$(cat <<EOF
-          @claude
-
-          Docs updated again ($commit_info). Current model list from OpenAPI spec:
-
-          \`\`\`
-          $models
-          \`\`\`
-
-          Please re-check and sync if needed.
-          EOF
-          )"
+          echo "Approving and merging PR #$pr_number..."
+          gh pr review "$pr_number" --approve
+          gh pr merge "$pr_number" --squash \
+            --subject "sync: update from Docs [automated]"
