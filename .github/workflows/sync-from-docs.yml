@@ -4,12 +4,6 @@ on:
   repository_dispatch:
     types: [docs-updated]
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Force sync even without detected changes"
-        required: false
-        default: "false"
-        type: boolean
 
 permissions:
   contents: write
@@ -32,75 +26,50 @@ jobs:
           path: _docs
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
-      - name: Gather Docs changes
-        id: changes
+      - name: Extract Docs source of truth
+        id: docs
         run: |
           cd _docs
-          # Get recent changes relevant to Suno
-          diff_info=$(git log -1 --pretty=format:"%h %s" 2>/dev/null || echo "unknown")
-          echo "commit_info=$diff_info" >> "$GITHUB_OUTPUT"
 
-          # Collect the current Suno-related docs content
-          echo "## Changed Docs Content" > /tmp/docs_context.md
-          echo "" >> /tmp/docs_context.md
-
-          # OpenAPI spec for suno
+          # 1. Extract model enum from OpenAPI spec
+          models="(not found)"
           if [ -f openapi/suno.json ]; then
-            echo "### OpenAPI Spec (openapi/suno.json)" >> /tmp/docs_context.md
-            echo '```json' >> /tmp/docs_context.md
-            # Extract model enums and key fields
-            python3 -c "
+            models=$(python3 -c "
           import json
           with open('openapi/suno.json') as f:
               spec = json.load(f)
-          # Print paths
-          for path, methods in spec.get('paths', {}).items():
-              for method, op in methods.items():
-                  print(f'{method.upper()} {path}: {op.get(\"summary\", \"\")}')
-          # Print model enum if found
           for path, methods in spec.get('paths', {}).items():
               for method, op in methods.items():
                   rb = op.get('requestBody', {})
-                  content = rb.get('content', {})
-                  for ct, mt in content.items():
-                      schema = mt.get('schema', {})
-                      props = schema.get('properties', {})
+                  for ct, mt in rb.get('content', {}).items():
+                      props = mt.get('schema', {}).get('properties', {})
                       if 'model' in props:
-                          print(f'Model enum: {props[\"model\"].get(\"enum\", [])}')
-          " 2>/dev/null || echo "(parse error)"
-            echo '```' >> /tmp/docs_context.md
-            echo "" >> /tmp/docs_context.md
+                          for m in props['model'].get('enum', []):
+                              print(m)
+          " 2>/dev/null | sort -u | tr '\n' ', ' | sed 's/,$//')
           fi
 
-          # Suno guide docs
-          if [ -d guides/suno ]; then
-            echo "### Integration Guides (guides/suno/)" >> /tmp/docs_context.md
-            for f in guides/suno/*.mdx; do
-              if [ -f "$f" ]; then
-                echo "- $(basename "$f")" >> /tmp/docs_context.md
-              fi
-            done
-            echo "" >> /tmp/docs_context.md
+          # 2. Extract API endpoints
+          endpoints="(not found)"
+          if [ -f openapi/suno.json ]; then
+            endpoints=$(python3 -c "
+          import json
+          with open('openapi/suno.json') as f:
+              spec = json.load(f)
+          for path, methods in spec.get('paths', {}).items():
+              for method, op in methods.items():
+                  summary = op.get('summary', '')
+                  print(f'{method.upper()} {path} — {summary}')
+          " 2>/dev/null)
           fi
 
-          # MCP doc
-          if [ -f mcp/suno.mdx ]; then
-            echo "### MCP Doc (mcp/suno.mdx)" >> /tmp/docs_context.md
-            echo '```' >> /tmp/docs_context.md
-            head -80 mcp/suno.mdx >> /tmp/docs_context.md
-            echo '```' >> /tmp/docs_context.md
-          fi
+          # 3. Last commit info
+          commit_info=$(git log -1 --pretty=format:"%h %s" 2>/dev/null || echo "unknown")
 
-          cd ..
-
-          # Get the diff between Docs latest and what we might have cached
-          docs_context=$(cat /tmp/docs_context.md)
-          # Truncate if too long
-          if [ ${#docs_context} -gt 8000 ]; then
-            docs_context="${docs_context:0:8000}...(truncated)"
-          fi
-          # Write to a file for the next step
-          echo "$docs_context" > /tmp/docs_context_final.md
+          # Save to files for issue body
+          echo "$models" > /tmp/models.txt
+          echo "$endpoints" > /tmp/endpoints.txt
+          echo "$commit_info" > /tmp/commit_info.txt
 
       - name: Check for existing open sync issue
         id: existing
@@ -120,47 +89,60 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
-          docs_context=$(cat /tmp/docs_context_final.md)
-          commit_info="${{ steps.changes.outputs.commit_info }}"
-
-          body=$(cat <<'ISSUE_BODY'
-          @claude
-
-          The upstream **Docs** repository has been updated. Please review the changes below and update this MCP server accordingly.
-
-          ## What to Check
-
-          1. **Model versions** — Compare `core/types.py` (`SunoModel` Literal) against the OpenAPI spec's model enum. Add any missing models, remove any deprecated ones.
-          2. **Tool parameters** — Compare tool function signatures in `tools/` against the OpenAPI spec's request parameters. Add new parameters, update descriptions.
-          3. **Tool descriptions** — Update docstrings in `tools/*.py` to match the latest API descriptions from the guides.
-          4. **README.md** — Update features list, model table, and usage examples if new capabilities were added.
-          5. **Tests** — Add or update tests in `tests/` for any new functionality.
-
-          ## Instructions
-
-          - Only make changes if the Docs content shows new models, parameters, or capabilities not yet in this repo.
-          - If no changes are needed, close this issue with a comment explaining why.
-          - If changes are needed, create a PR with the updates.
-          - Keep changes minimal and focused — don't refactor unrelated code.
-          ISSUE_BODY
-          )
-
-          full_body=$(printf '%s\n\n## Docs Content\n\n%s' "$body" "$docs_context")
+          models=$(cat /tmp/models.txt)
+          endpoints=$(cat /tmp/endpoints.txt)
+          commit_info=$(cat /tmp/commit_info.txt)
 
           gh issue create \
             --title "sync: update from Docs ($commit_info)" \
             --label "auto-sync" \
-            --body "$full_body"
+            --body "$(cat <<EOF
+          @claude
+
+          The upstream Docs have been updated. Make sure this MCP server is in sync with the latest API spec.
+
+          ## Source of Truth
+
+          The Docs OpenAPI spec defines these **models** for Suno:
+
+          \`\`\`
+          $models
+          \`\`\`
+
+          And these **endpoints**:
+
+          \`\`\`
+          $endpoints
+          \`\`\`
+
+          ## What to Do
+
+          1. Compare the models above against \`core/types.py\` (the \`SunoModel\` Literal). Add any missing models, remove any that are no longer in the spec.
+          2. Compare the endpoints above against the tools in \`tools/\`. Add tools for new endpoints if needed.
+          3. Update \`README.md\` model table if the model list changed.
+          4. If nothing needs changing, just close this issue with a comment.
+          5. If changes are needed, create a PR.
+          EOF
+          )"
 
       - name: Update existing issue
         if: steps.existing.outputs.exists == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
         run: |
-          docs_context=$(cat /tmp/docs_context_final.md)
-          commit_info="${{ steps.changes.outputs.commit_info }}"
-
-          body=$(printf '@claude\n\nNew Docs update detected (%s). Please re-check and update if needed.\n\n%s' "$commit_info" "$docs_context")
+          models=$(cat /tmp/models.txt)
+          commit_info=$(cat /tmp/commit_info.txt)
 
           gh issue comment "${{ steps.existing.outputs.issue_number }}" \
-            --body "$body"
+            --body "$(cat <<EOF
+          @claude
+
+          Docs updated again ($commit_info). Current model list from OpenAPI spec:
+
+          \`\`\`
+          $models
+          \`\`\`
+
+          Please re-check and sync if needed.
+          EOF
+          )"
