@@ -6,21 +6,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
   issues: write
-  id-token: write
 
 jobs:
-  sync:
+  create-task:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
       - name: Checkout Docs
         uses: actions/checkout@v4
         with:
@@ -29,70 +22,46 @@ jobs:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 5
 
-      - name: Run Claude Code
-        id: claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.CLAUDE_CODE_API_KEY }}
-          github_token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          show_full_output: true
-          prompt: |
-            The upstream AceDataCloud Docs have been updated. They are checked out at `_docs/`.
-            Your job: ensure this MCP server stays in sync with the latest Docs.
+      - name: Get Docs changes
+        id: docs
+        run: |
+          cd _docs
+          commit_info=$(git log -1 --pretty=format:"%h %s" 2>/dev/null || echo "unknown")
+          echo "commit_info=$commit_info" >> "$GITHUB_OUTPUT"
 
-            Source of truth: `_docs/openapi/suno.json` (the Suno API OpenAPI spec).
+          recent_changes=$(git log --oneline -5 2>/dev/null || echo "unknown")
+          echo "recent_changes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$recent_changes" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-            Check recent Docs changes (`cd _docs && git log --oneline -5`), then compare
-            the current spec against this repo's code. Fix any differences in model types,
-            tool definitions, parameters, or documentation.
-
-            Read this repo's CLAUDE.md for detailed sync rules.
-
-            If everything is already in sync, make no changes.
+      - name: Close existing sync issues
         env:
-          ANTHROPIC_BASE_URL: ${{ vars.CLAUDE_CODE_API_BASE || 'https://api.acedata.cloud' }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.CLAUDE_CODE_API_KEY }}
-          ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-6
-          ANTHROPIC_DEFAULT_OPUS_MODEL: claude-opus-4-6
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          # Close any existing open auto-sync issues to avoid duplicates
+          gh issue list --label "auto-sync" --state open --json number --jq '.[].number' | while read -r num; do
+            gh issue close "$num" --comment "Superseded by new sync trigger." 2>/dev/null || true
+          done
 
-      - name: Merge PR
-        if: steps.claude.outputs.branch_name != ''
+      - name: Create issue for Copilot
         env:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
         run: |
-          branch="${{ steps.claude.outputs.branch_name }}"
-
-          # Find the PR created by Claude for this branch
-          pr_number=$(gh pr list --head "$branch" --state open \
-            --json number --jq '.[0].number' 2>/dev/null || echo "")
-
-          if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
-            echo "No PR found for branch $branch"
-            exit 0
-          fi
-
-          echo "Found PR #$pr_number (branch: $branch). Waiting for CI..."
-
-          max_attempts=30
-          for i in $(seq 1 $max_attempts); do
-            sleep 30
-            status=$(gh pr checks "$pr_number" --json name,state \
-              --jq '[.[] | select(.name != "Sync from Docs")] |
-                if length == 0 then "pass"
-                elif all(.state == "SUCCESS" or .state == "SKIPPED") then "pass"
-                elif any(.state == "FAILURE") then "fail"
-                else "pending" end' 2>/dev/null || echo "pending")
-            echo "Attempt $i/$max_attempts: $status"
-            if [ "$status" = "pass" ]; then
-              echo "CI passed!"
-              break
-            elif [ "$status" = "fail" ]; then
-              echo "CI failed. Skipping merge."
-              exit 1
-            fi
-          done
-
-          echo "Approving and merging PR #$pr_number..."
-          gh pr review "$pr_number" --approve
-          gh pr merge "$pr_number" --squash \
-            --subject "sync: update from Docs [automated]"
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/issues \
+            --input - <<PAYLOAD
+          {
+            "title": "sync: update from Docs (${{ steps.docs.outputs.commit_info }})",
+            "body": "The upstream Docs have been updated. Ensure this MCP server is in sync with the latest API spec.\n\n## Recent Docs Changes\n\n\`\`\`\n${{ steps.docs.outputs.recent_changes }}\n\`\`\`\n\n## Instructions\n\nSee \`.github/copilot-instructions.md\` and \`CLAUDE.md\` for sync rules.\n\nSource of truth: the Docs repo OpenAPI spec at \`openapi/suno.json\`.\n\nCompare models, endpoints, and parameters against this repo's code. Fix any differences.",
+            "labels": ["auto-sync"],
+            "assignees": ["copilot-swe-agent[bot]"],
+            "agent_assignment": {
+              "target_repo": "${{ github.repository }}",
+              "base_branch": "main",
+              "custom_instructions": "Check out the AceDataCloud/Docs repo and read openapi/suno.json. Compare the model enum and endpoints against core/types.py and tools/. Fix any differences. Read CLAUDE.md for detailed sync rules. If everything is already in sync, close this issue with a comment saying so."
+            }
+          }
+          PAYLOAD
