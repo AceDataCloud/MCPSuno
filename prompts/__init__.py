@@ -65,8 +65,8 @@ When the user wants to generate music, choose the appropriate tool based on thei
 ## Important Notes:
 1. Music generation is async in MCP - generation tools should return quickly with a task_id
 2. After any generate/extend/cover/remaster/stems/media conversion call, use `suno_get_task` to poll for the final result
-2. Default model is chirp-v4-5 (good balance of quality and speed)
-3. For longest songs (8 min), use chirp-v5 or chirp-v4-5-plus
+2. Default model is chirp-v5-5 (latest generation quality)
+3. For longest songs (8 min), use chirp-v5-5, chirp-v5, or chirp-v4-5-plus
 4. Vocal gender only works on v4.5+ models
 """
 

@@ -13,7 +13,7 @@ def test_settings_default_values():
 
         settings = Settings()
         assert settings.api_base_url == "https://api.acedata.cloud"
-        assert settings.default_model == "chirp-v4-5"
+        assert settings.default_model == "chirp-v5-5"
         assert settings.request_timeout == 1800.0
         assert settings.server_name == "suno"
         assert settings.transport == "stdio"
@@ -24,7 +24,7 @@ def test_settings_from_environment():
     env_vars = {
         "ACEDATACLOUD_API_TOKEN": "my-token",
         "ACEDATACLOUD_API_BASE_URL": "https://custom.api.com",
-        "SUNO_DEFAULT_MODEL": "chirp-v5",
+        "SUNO_DEFAULT_MODEL": "chirp-v5-5",
         "SUNO_REQUEST_TIMEOUT": "300",
         "MCP_SERVER_NAME": "my-suno",
         "LOG_LEVEL": "DEBUG",
@@ -36,7 +36,7 @@ def test_settings_from_environment():
         settings = Settings()
         assert settings.api_token == "my-token"
         assert settings.api_base_url == "https://custom.api.com"
-        assert settings.default_model == "chirp-v5"
+        assert settings.default_model == "chirp-v5-5"
         assert settings.request_timeout == 300.0
         assert settings.server_name == "my-suno"
         assert settings.log_level == "DEBUG"
