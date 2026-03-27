@@ -47,12 +47,20 @@ jobs:
             echo "should_merge=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Merge PR
+      - name: Mark ready and merge PR
         if: steps.find-pr.outputs.should_merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN }}
         run: |
           pr_number="${{ steps.find-pr.outputs.pr_number }}"
+
+          # Copilot creates draft PRs — mark as ready first
+          is_draft=$(gh pr view "$pr_number" --repo "${{ github.repository }}" --json isDraft --jq '.isDraft')
+          if [ "$is_draft" = "true" ]; then
+            echo "PR #$pr_number is draft, marking as ready..."
+            gh pr ready "$pr_number" --repo "${{ github.repository }}"
+          fi
+
           echo "Merging PR #$pr_number..."
           gh pr merge "$pr_number" --repo "${{ github.repository }}" --squash \
             --subject "sync: update from Docs [automated]"
