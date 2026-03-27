@@ -2,7 +2,7 @@ name: Auto-merge Copilot PRs
 
 on:
   workflow_run:
-    workflows: ["CI", "Running Copilot coding agent"]
+    workflows: ["Copilot coding agent"]
     types: [completed]
 
 jobs:
