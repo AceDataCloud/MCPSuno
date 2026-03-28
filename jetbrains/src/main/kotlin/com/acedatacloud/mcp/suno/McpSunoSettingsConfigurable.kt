@@ -88,7 +88,7 @@ class McpSunoSettingsConfigurable : Configurable {
                     browserLink("API Documentation", "https://docs.acedata.cloud")
                 }
                 row {
-                    browserLink("Source Code", "https://github.com/AceDataCloud/MCPSuno")
+                    browserLink("Source Code", "https://github.com/AceDataCloud/SunoMCP")
                 }
                 row {
                     browserLink("PyPI Package", "https://pypi.org/project/mcp-suno/")
