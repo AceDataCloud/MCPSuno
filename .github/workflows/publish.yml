@@ -368,9 +368,10 @@ jobs:
               fi
               RESPONSE=$(curl -s -w "\n%{http_code}" \
                 -H "Authorization: Bearer $PUBLISH_TOKEN" \
-                -F "xmlId=com.acedatacloud.mcp.suno" \
                 -F "file=@$PLUGIN_ZIP" \
-                https://plugins.jetbrains.com/api/updates/upload)
+                -F "licenseUrl=https://opensource.org/licenses/MIT" \
+                -F "tags=Code tools" \
+                https://plugins.jetbrains.com/api/plugins/intellij/upload)
               HTTP_CODE=$(echo "$RESPONSE" | tail -1)
               BODY=$(echo "$RESPONSE" | head -n -1)
               echo "Response ($HTTP_CODE): $BODY"
