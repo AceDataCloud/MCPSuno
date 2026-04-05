@@ -22,6 +22,7 @@ async def suno_list_models() -> str:
     Returns:
         Table of all models with their version, limits, and features.
     """
+    # Last updated: 2026-04-05
     return """Available Suno Models:
 
 | Model           | Version | Prompt Limit | Lyric Limit  | Style Limit | Max Duration |
@@ -52,6 +53,7 @@ async def suno_list_actions() -> str:
     Returns:
         Categorized list of all actions and their corresponding tools.
     """
+    # Last updated: 2026-04-05
     return """Available Suno Actions and Tools:
 
 Music Generation:
@@ -119,6 +121,7 @@ async def suno_get_lyric_format_guide() -> str:
     Returns:
         Complete guide with section markers, examples, and tips.
     """
+    # Last updated: 2026-04-05
     return """Lyric Format Guide for Suno:
 
 Section Markers (use square brackets):

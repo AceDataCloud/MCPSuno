@@ -10,7 +10,10 @@ from loguru import logger
 from core.config import settings
 from core.exceptions import SunoAPIError, SunoAuthError, SunoTimeoutError
 
-# Force upstream async mode in MCP so tool calls return quickly with a task_id.
+# Dummy callback URL used to force the upstream API into async mode.
+# When present, the API returns immediately with a task_id instead of blocking
+# until generation completes. The health endpoint simply returns 200 OK and
+# discards the callback payload — it is never actually processed.
 _ASYNC_CALLBACK_URL = "https://api.acedata.cloud/health"
 
 # Context variable for per-request API token (used in HTTP/remote mode)

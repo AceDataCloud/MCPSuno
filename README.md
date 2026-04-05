@@ -22,6 +22,38 @@ Generate AI music, lyrics, and manage audio projects directly from Claude, VS Co
 - **Persona Management** - Save and reuse voice styles
 - **Task Tracking** - Monitor generation progress and retrieve results
 
+## Tool Reference
+
+| Tool | Description |
+|------|-------------|
+| `suno_generate_music` | Generate AI music from a text prompt using Suno's Inspiration Mode. |
+| `suno_generate_custom_music` | Generate AI music with full control over lyrics, title, and style (Custom Mode). |
+| `suno_extend_music` | Extend an existing song from a specific timestamp with new lyrics. |
+| `suno_cover_music` | Create a cover or remix version of an existing song in a different style. |
+| `suno_concat_music` | Concatenate extended song segments into a single complete audio file. |
+| `suno_generate_with_persona` | Generate music using a saved artist persona for consistent vocal style. |
+| `suno_remaster_music` | Remaster an existing song to improve audio quality. |
+| `suno_stems_music` | Separate a song into individual stems (vocals and instruments). |
+| `suno_replace_section` | Replace a specific time range in a song with new generated content. |
+| `suno_upload_extend` | Extend an uploaded audio (your own music) with new AI-generated content. |
+| `suno_upload_cover` | Create an AI cover of an uploaded audio (your own music). |
+| `suno_mashup_music` | Create a musical mashup by blending multiple songs together. |
+| `suno_generate_lyrics` | Generate song lyrics from a text prompt. |
+| `suno_get_mp4` | Get an MP4 video version of a generated song. |
+| `suno_get_timing` | Get timing and subtitle data for a generated song. |
+| `suno_extract_vocals` | Extract the vocal track from a generated song (stem separation). |
+| `suno_get_wav` | Get the lossless WAV format of a generated song. |
+| `suno_get_midi` | Get MIDI data extracted from a generated song. |
+| `suno_create_persona` | Create a new artist persona from an existing audio's vocal style. |
+| `suno_optimize_style` | Optimize a music style description for better generation results. |
+| `suno_mashup_lyrics` | Generate mashup lyrics by combining two sets of lyrics. |
+| `suno_upload_audio` | Upload an external audio file to Suno for use in subsequent operations. |
+| `suno_get_task` | Query the status and result of a music generation task. |
+| `suno_get_tasks_batch` | Query multiple music generation tasks at once. |
+| `suno_list_models` | List all available Suno models and their capabilities. |
+| `suno_list_actions` | List all available Suno API actions and corresponding tools. |
+| `suno_get_lyric_format_guide` | Get guidance on formatting lyrics for Suno music generation. |
+
 ## Quick Start
 
 ### 1. Get Your API Token
