@@ -371,6 +371,7 @@ jobs:
                 -F "file=@$PLUGIN_ZIP" \
                 -F "licenseUrl=https://opensource.org/licenses/MIT" \
                 -F "tags=Code tools" \
+                -F "vendor=acedatacloud" \
                 https://plugins.jetbrains.com/api/plugins/intellij/upload)
               HTTP_CODE=$(echo "$RESPONSE" | tail -1)
               BODY=$(echo "$RESPONSE" | head -n -1)
