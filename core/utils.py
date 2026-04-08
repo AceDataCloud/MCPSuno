@@ -18,14 +18,14 @@ def _with_submission_guidance(
         "poll_tool": poll_tool,
         "batch_poll_tool": batch_poll_tool,
         "polling_interval_seconds": 15,
-        "max_poll_attempts": 20,
-        "expected_wait_seconds": 300,
+        "max_poll_attempts": 100,
+        "expected_wait_seconds": 600,
         "next_step": (
             f'Call {poll_tool}(task_id="{task_id}") to poll until the task completes '
             f"and the final media URLs are available. "
             f"IMPORTANT: Media generation typically takes 1-5 minutes. "
             f"Wait at least 15 seconds between each poll. "
-            f"Keep polling for up to 20 attempts. Do NOT stop early — the task is still running."
+            f"Keep polling for up to 100 attempts. Do NOT stop early — the task is still running."
         ),
     }
     return payload
@@ -60,7 +60,7 @@ def _with_task_guidance(
             "state": state,
             "is_complete": False,
             "polling_interval_seconds": 15,
-            "max_poll_attempts": 20,
+            "max_poll_attempts": 100,
             "next_step": (
                 f'Task is NOT complete yet (state: "{state}"). '
                 f'IMPORTANT: Only state="complete" with success=true means the task is finished. '
@@ -68,7 +68,7 @@ def _with_task_guidance(
                 f"these are streaming previews, NOT final results. "
                 f'Wait 15 seconds, then call {poll_tool}(task_id="{task_id}") again. '
                 f"Media generation typically takes 1-5 minutes. "
-                f"Keep polling for up to 20 attempts. Do NOT stop early."
+                f"Keep polling for up to 100 attempts. Do NOT stop early."
             ),
         }
     return payload
