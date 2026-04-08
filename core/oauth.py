@@ -16,6 +16,7 @@ Flow:
 
 import base64
 import hashlib
+import json
 import secrets
 import time
 from urllib.parse import urlencode
@@ -92,7 +93,7 @@ class AceDataCloudOAuthProvider:
             "client_id": settings.oauth_client_id,
             "redirect_uri": callback_url,
             "response_type": "code",
-            "scope": "profile",
+            "scope": "profile platform",
             "state": mcp_state,
             "code_challenge": auth_code_challenge,
             "code_challenge_method": "S256",
@@ -109,25 +110,49 @@ class AceDataCloudOAuthProvider:
         mcp_state = request.query_params.get("state")
         adc_code = request.query_params.get("code")
 
+        logger.debug(
+            f"handle_callback: state={mcp_state}, code={adc_code[:16] if adc_code else None}, "
+            f"pending_auth_keys={list(self._pending_auth.keys())}"
+        )
+
         if not mcp_state or not adc_code:
+            logger.error(f"handle_callback: missing state={mcp_state} or code={adc_code}")
             return JSONResponse({"error": "Missing state or code parameter"}, status_code=400)
 
         pending = self._pending_auth.pop(mcp_state, None)
         if not pending:
+            logger.error(
+                f"handle_callback: state {mcp_state} not found in pending_auth. "
+                f"Available states: {list(self._pending_auth.keys())}"
+            )
             return JSONResponse({"error": "Invalid or expired state"}, status_code=400)
 
         try:
             # Exchange AceDataCloud OAuth 2.0 code for JWT (with PKCE)
             code_verifier = pending.get("auth_code_verifier", "")
+            logger.debug(
+                f"handle_callback: exchanging code for JWT, pending_keys={list(pending.keys())}"
+            )
             jwt_token = await self._exchange_code_for_jwt(adc_code, code_verifier)
+            logger.debug(
+                f"handle_callback: JWT exchange returned "
+                f"{'token=' + jwt_token[:32] + '...' if jwt_token else 'None'}"
+            )
             if not jwt_token:
+                logger.error("handle_callback: JWT exchange failed, returning 502")
                 return JSONResponse(
                     {"error": "Failed to exchange authorization code"}, status_code=502
                 )
 
             # Fetch user's API credential token from PlatformBackend
+            logger.debug("handle_callback: fetching user credential...")
             api_token = await self._get_user_credential(jwt_token)
+            logger.debug(
+                f"handle_callback: _get_user_credential returned "
+                f"{'token=' + api_token[:12] + '...' if api_token else 'None'}"
+            )
             if not api_token:
+                logger.error("handle_callback: credential fetch returned None, returning 403")
                 return JSONResponse(
                     {
                         "error": "No API credential found. Please create an API key at "
@@ -278,13 +303,41 @@ class AceDataCloudOAuthProvider:
 
     # --- Internal helpers ---
 
+    @staticmethod
+    def _decode_jwt_payload(token: str) -> dict | None:
+        """Decode JWT payload without verification (for debug logging only)."""
+        try:
+            parts = token.split(".")
+            if len(parts) != 3:
+                logger.debug(f"JWT has {len(parts)} parts, expected 3")
+                return None
+            payload_b64 = parts[1]
+            # Add padding
+            padding = 4 - len(payload_b64) % 4
+            if padding != 4:
+                payload_b64 += "=" * padding
+            payload_bytes = base64.urlsafe_b64decode(payload_b64)
+            payload: dict = json.loads(payload_bytes)
+            return payload
+        except Exception as e:
+            logger.debug(f"Failed to decode JWT payload: {e}")
+            return None
+
     async def _exchange_code_for_jwt(self, code: str, code_verifier: str) -> str | None:
         """Exchange AceDataCloud OAuth 2.0 authorization code for JWT."""
         callback_url = f"{settings.server_url}/oauth/callback"
+        token_url = f"{settings.auth_base_url}/oauth2/token"
+        logger.debug(
+            f"Exchanging code for JWT: token_url={token_url}, "
+            f"client_id={settings.oauth_client_id}, "
+            f"redirect_uri={callback_url}, "
+            f"code={code[:16]}..., "
+            f"code_verifier={code_verifier[:16]}..."
+        )
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.post(
-                    f"{settings.auth_base_url}/oauth2/token",
+                    token_url,
                     data={
                         "grant_type": "authorization_code",
                         "code": code,
@@ -293,9 +346,35 @@ class AceDataCloudOAuthProvider:
                         "code_verifier": code_verifier,
                     },
                 )
+                logger.debug(
+                    f"Token exchange response: status={response.status_code}, "
+                    f"body={response.text[:500]}"
+                )
                 if response.status_code == 200:
                     data = response.json()
                     access_token: str | None = data.get("access_token")
+                    if access_token:
+                        # Decode and log JWT claims for debugging
+                        claims = self._decode_jwt_payload(access_token)
+                        if claims:
+                            logger.debug(
+                                f"JWT claims: user_id={claims.get('user_id')}, "
+                                f"scope={claims.get('scope')}, "
+                                f"permissions={claims.get('permissions')}, "
+                                f"is_superuser={claims.get('is_superuser')}, "
+                                f"is_verified={claims.get('is_verified')}, "
+                                f"exp={claims.get('exp')}, "
+                                f"iat={claims.get('iat')}, "
+                                f"token_type={claims.get('token_type')}, "
+                                f"all_keys={list(claims.keys())}"
+                            )
+                        else:
+                            logger.warning("Could not decode JWT payload for debug")
+                    else:
+                        logger.error(
+                            f"Token exchange 200 but no access_token in response. "
+                            f"Keys: {list(data.keys())}"
+                        )
                     return access_token
                 logger.error(f"OAuth token exchange failed: {response.status_code} {response.text}")
         except Exception:
@@ -312,58 +391,141 @@ class AceDataCloudOAuthProvider:
         4. Create credential under that application (POST /api/v1/credentials/)
         """
         headers = {"Authorization": f"Bearer {jwt_token}"}
+        logger.debug(
+            f"_get_user_credential: platform_base_url={settings.platform_base_url}, "
+            f"jwt_token={jwt_token[:32]}..."
+        )
+
+        # Decode JWT for debugging
+        claims = self._decode_jwt_payload(jwt_token)
+        if claims:
+            logger.debug(
+                f"_get_user_credential JWT: user_id={claims.get('user_id')}, "
+                f"scope={claims.get('scope')}, "
+                f"permissions={claims.get('permissions')}, "
+                f"token_type={claims.get('token_type')}, "
+                f"exp={claims.get('exp')}"
+            )
+        else:
+            logger.warning("_get_user_credential: could not decode JWT for debug")
+
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 # Step 1: Check for existing credentials
-                response = await client.get(
-                    f"{settings.platform_base_url}/api/v1/credentials/",
-                    headers=headers,
+                creds_url = f"{settings.platform_base_url}/api/v1/credentials/"
+                logger.debug(f"Step 1: GET {creds_url}")
+                response = await client.get(creds_url, headers=headers)
+                logger.debug(
+                    f"Step 1 response: status={response.status_code}, body={response.text[:1000]}"
                 )
+
                 if response.status_code == 200:
                     data = response.json()
                     results = data.get("results", data) if isinstance(data, dict) else data
+                    logger.debug(
+                        f"Step 1 parsed: type(data)={type(data).__name__}, "
+                        f"type(results)={type(results).__name__}, "
+                        f"count={len(results) if isinstance(results, list) else 'N/A'}"
+                    )
                     if isinstance(results, list):
-                        for cred in results:
+                        for i, cred in enumerate(results):
+                            logger.debug(
+                                f"Step 1 credential[{i}]: "
+                                f"id={cred.get('id')}, "
+                                f"token={'present' if cred.get('token') else 'MISSING'}, "
+                                f"type={cred.get('type')}, "
+                                f"keys={list(cred.keys())}"
+                            )
                             cred_token: str | None = cred.get("token")
                             if cred_token:
-                                logger.info("Found existing user credential token")
+                                logger.info(
+                                    f"Found existing credential token "
+                                    f"(id={cred.get('id')}, token={cred_token[:12]}...)"
+                                )
                                 return cred_token
+                        logger.debug(
+                            f"Step 1: iterated {len(results)} credentials, none had a token"
+                        )
+                    else:
+                        logger.warning(f"Step 1: results is not a list: {type(results).__name__}")
+                else:
+                    logger.error(
+                        f"Step 1 FAILED: credentials list returned "
+                        f"status={response.status_code}, body={response.text[:500]}"
+                    )
 
                 # Step 2: No credentials found — auto-provision
                 logger.info("No credentials found, auto-provisioning Application + Credential")
 
                 # Step 2a: Find or create a Global Usage application
-                app_resp = await client.get(
-                    f"{settings.platform_base_url}/api/v1/applications/",
-                    params={
-                        "limit": "10",
-                        "ordering": "-created_at",
-                        "type": "Usage",
-                        "scope": "Global",
-                    },
-                    headers=headers,
+                apps_url = f"{settings.platform_base_url}/api/v1/applications/"
+                apps_params = {
+                    "limit": "10",
+                    "ordering": "-created_at",
+                    "type": "Usage",
+                    "scope": "Global",
+                }
+                logger.debug(f"Step 2a: GET {apps_url} params={apps_params}")
+                app_resp = await client.get(apps_url, params=apps_params, headers=headers)
+                logger.debug(
+                    f"Step 2a response: status={app_resp.status_code}, body={app_resp.text[:1000]}"
                 )
+
                 application_id: str | None = None
                 if app_resp.status_code == 200:
                     app_data = app_resp.json()
                     items = app_data.get("items", app_data.get("results", []))
+                    logger.debug(
+                        f"Step 2a parsed: "
+                        f"data_keys={list(app_data.keys()) if isinstance(app_data, dict) else 'not-dict'}, "
+                        f"items_count={len(items) if isinstance(items, list) else 'N/A'}"
+                    )
                     if isinstance(items, list) and items:
                         app = items[0]
                         application_id = app.get("id")
+                        logger.debug(
+                            f"Step 2a: using app id={application_id}, "
+                            f"type={app.get('type')}, "
+                            f"scope={app.get('scope')}, "
+                            f"remaining_amount={app.get('remaining_amount')}, "
+                            f"keys={list(app.keys())}"
+                        )
                         # Check if the app already has a credential
                         app_creds = app.get("credentials", [])
+                        logger.debug(
+                            f"Step 2a: app.credentials count="
+                            f"{len(app_creds) if isinstance(app_creds, list) else 'not-list'}"
+                        )
                         if isinstance(app_creds, list) and app_creds:
+                            logger.debug(f"Step 2a: first credential in app: {app_creds[0]}")
                             existing_token: str | None = app_creds[0].get("token")
                             if isinstance(existing_token, str) and existing_token:
-                                logger.info("Found credential in existing application")
+                                logger.info(
+                                    f"Found credential in existing application "
+                                    f"(app_id={application_id}, token={existing_token[:12]}...)"
+                                )
                                 return existing_token
+                            logger.debug("Step 2a: credential in app has no token field or empty")
+                    else:
+                        logger.debug("Step 2a: no Global Usage applications found")
+                else:
+                    logger.error(
+                        f"Step 2a FAILED: applications list returned "
+                        f"status={app_resp.status_code}, body={app_resp.text[:500]}"
+                    )
 
                 if not application_id:
                     # Create a new Global Usage application
+                    create_payload = {"type": "Usage", "scope": "Global"}
+                    logger.debug(f"Step 2a-create: POST {apps_url} json={create_payload}")
                     create_app_resp = await client.post(
-                        f"{settings.platform_base_url}/api/v1/applications/",
+                        apps_url,
                         headers={**headers, "Content-Type": "application/json"},
-                        json={"type": "Usage", "scope": "Global"},
+                        json=create_payload,
+                    )
+                    logger.debug(
+                        f"Step 2a-create response: status={create_app_resp.status_code}, "
+                        f"body={create_app_resp.text[:1000]}"
                     )
                     if create_app_resp.status_code in (200, 201):
                         new_app = create_app_resp.json()
@@ -377,24 +539,39 @@ class AceDataCloudOAuthProvider:
                         return None
 
                 # Step 2b: Create a credential under the application
+                cred_create_url = f"{settings.platform_base_url}/api/v1/credentials/"
+                cred_create_payload = {"application_id": application_id}
+                logger.debug(f"Step 2b: POST {cred_create_url} json={cred_create_payload}")
                 cred_resp = await client.post(
-                    f"{settings.platform_base_url}/api/v1/credentials/",
+                    cred_create_url,
                     headers={**headers, "Content-Type": "application/json"},
-                    json={"application_id": application_id},
+                    json=cred_create_payload,
+                )
+                logger.debug(
+                    f"Step 2b response: status={cred_resp.status_code}, "
+                    f"body={cred_resp.text[:1000]}"
                 )
                 if cred_resp.status_code in (200, 201):
                     cred_data = cred_resp.json()
+                    logger.debug(
+                        f"Step 2b parsed: type={type(cred_data).__name__}, "
+                        f"keys={list(cred_data.keys()) if isinstance(cred_data, dict) else 'not-dict'}"
+                    )
                     new_token: str | None = (
                         cred_data.get("token") if isinstance(cred_data, dict) else None
                     )
                     if isinstance(new_token, str) and new_token:
-                        logger.info("Auto-provisioned new credential token")
+                        logger.info(
+                            f"Auto-provisioned new credential token (token={new_token[:12]}...)"
+                        )
                         return new_token
-                    logger.error("Credential created but no token in response")
+                    logger.error(f"Credential created but no token in response: {cred_data}")
                 else:
                     logger.error(
                         f"Failed to create credential: {cred_resp.status_code} {cred_resp.text}"
                     )
         except Exception:
             logger.exception("Credential fetch/provision error")
+
+        logger.error("_get_user_credential: returning None — all steps failed")
         return None

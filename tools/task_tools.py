@@ -29,9 +29,16 @@ async def suno_get_task(
     - You want to get the full details of a generated song
 
     Task states:
-    - 'pending': Generation is still in progress
-    - 'complete': Generation finished successfully
+    - 'pending': Generation is still in progress — KEEP POLLING
+    - 'processing': Generation is being processed — KEEP POLLING
+    - 'complete': Generation finished successfully — this is the ONLY state that means done
     - 'failed': Generation failed (check error message)
+
+    CRITICAL: During the 'pending' state, the response may already contain intermediate
+    audio_url values (e.g. URLs from audiopipe.suno.ai). These are STREAMING PREVIEW URLs,
+    NOT final results. You MUST check the 'state' field — only present the results to the
+    user when state is 'complete' and success is true. Do NOT stop polling just because
+    audio_url is non-empty.
 
     Returns:
         Task status and generated audio information including URLs, title, lyrics, and duration.
@@ -60,6 +67,10 @@ async def suno_get_tasks_batch(
     - You want to get status of several songs at once
     - You're tracking a batch of generations
 
+    CRITICAL: Same as suno_get_task — only consider a task complete when its state
+    is 'complete' and success is true. Intermediate audio_url values during 'pending'
+    state are streaming previews, NOT final results.
+
     Returns:
         Status and audio information for all queried tasks.
     """
@@ -76,16 +87,28 @@ async def suno_get_tasks_batch(
 
     for item in result.get("items", []):
         response_info = item.get("response", {})
+        state = item.get("state", "unknown")
+        success = response_info.get("success", False)
         lines.extend(
             [
                 f"=== Task: {item.get('id', 'N/A')} ===",
+                f"State: {state}",
                 f"Created At: {item.get('created_at', 'N/A')}",
-                f"Success: {response_info.get('success', False)}",
+                f"Success: {success}",
             ]
         )
 
-        for audio in response_info.get("data", []):
-            lines.append(f"  - {audio.get('title', 'Untitled')}: {audio.get('audio_url', 'N/A')}")
+        if state == "complete" and success:
+            for audio in response_info.get("data", []):
+                lines.append(
+                    f"  - {audio.get('title', 'Untitled')}: {audio.get('audio_url', 'N/A')}"
+                )
+        elif state == "failed":
+            lines.append(f"  Error: {response_info.get('error', 'Unknown error')}")
+        else:
+            lines.append(
+                f"  ⏳ Still {state} — keep polling. Any audio_url values are intermediate previews."
+            )
 
         lines.append("")
 
