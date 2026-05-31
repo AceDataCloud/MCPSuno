@@ -1,8 +1,8 @@
 {
   "name": "mcp-suno",
   "displayName": "Suno MCP",
-  "description": "AI Music Generation with Suno - Generate songs, lyrics, covers, and more via Ace Data Cloud API",
-  "version": "0.1.0",
+  "description": "AI music generation with Suno — songs, lyrics, covers, stems, and more.",
+  "version": "0.2.0",
   "publisher": "acedatacloud",
   "icon": "icon.png",
   "license": "MIT",
@@ -23,8 +23,13 @@
     "music",
     "ai music",
     "song generation",
-    "lyrics"
+    "lyrics",
+    "audio"
   ],
+  "galleryBanner": {
+    "color": "#0E1117",
+    "theme": "dark"
+  },
   "homepage": "https://github.com/AceDataCloud/SunoMCP",
   "repository": {
     "type": "git",
@@ -36,14 +41,20 @@
   "contributes": {
     "mcpServers": {
       "suno": {
-        "command": "uvx",
-        "args": [
-          "mcp-suno"
-        ],
-        "env": {
-          "ACEDATACLOUD_API_TOKEN": ""
+        "type": "http",
+        "url": "https://suno.mcp.acedata.cloud/mcp",
+        "headers": {
+          "Authorization": "Bearer ${input:acedatacloud_api_token}"
         }
       }
-    }
+    },
+    "inputs": [
+      {
+        "type": "promptString",
+        "id": "acedatacloud_api_token",
+        "description": "Ace Data Cloud API token. Sign in at https://platform.acedata.cloud and create a token in 'API Keys'. Stored securely by VS Code.",
+        "password": true
+      }
+    ]
   }
 }
